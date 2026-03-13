@@ -1,0 +1,22 @@
+{
+  "name": "opentscad",
+  "version": "0.0.0",
+  "description": "",
+  "main": "index.js",
+  "scripts": {
+    "dev": "vite"
+  },
+  "keywords": [],
+  "author": "Nicolas Stadler",
+  "type": "commonjs",
+  "dependencies": {
+    "@types/three": "^0.183.1",
+    "opencascade.js": "^2.0.0-beta.b5ff984",
+    "three": "^0.183.2"
+  },
+  "devDependencies": {
+    "vite": "^7.0.0",
+    "vite-plugin-wasm": "^3.5.0",
+    "vite-plugin-top-level-await": "^1.4.4"
+  }
+}
