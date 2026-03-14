@@ -8,48 +8,34 @@ export type TriangulatedResult = {
 
 let onTriangulated: ((data: TriangulatedResult) => void) | null = null;
 
-export function registerTriangulatedCallback(
-  cb: (data: TriangulatedResult) => void,
-) {
+export function registerTriangulatedCallback(cb: (data: TriangulatedResult) => void) {
   onTriangulated = cb;
 }
 
-const worker = new Worker(new URL("./cad.worker.ts", import.meta.url), {
-  type: "module",
+const worker = new Worker(new URL('./cad.worker.ts', import.meta.url), {
+  type: 'module',
 });
 
-// Initialize
-worker.postMessage({ type: "INIT", id: "1" });
-
-// Create box
-worker.postMessage({
-  type: "CREATE_BOX",
-  id: "2",
-  payload: {
-    width: 10,
-    height: 10,
-    depth: 10,
-  },
-});
+worker.postMessage({ type: 'INIT', id: '1' });
 
 // Request triangulation once the box is created
 worker.onmessage = (event) => {
   const { type, id, result } = event.data;
 
-  if (type === "CREATE_BOX_DONE") {
+  if (type === 'CREATE_BOX_DONE') {
     const shapeId = result;
     worker.postMessage({
-      type: "TRIANGULATE",
-      id: "3",
+      type: 'TRIANGULATE',
+      id: '3',
       payload: { shapeId },
     });
   }
 
-  if (type === "TRIANGULATE_DONE") {
+  if (type === 'TRIANGULATE_DONE') {
     if (onTriangulated) {
       onTriangulated(result as TriangulatedResult);
     } else {
-      console.log("Triangulated mesh from worker:", result);
+      console.log('Triangulated mesh from worker:', result);
     }
   }
 };

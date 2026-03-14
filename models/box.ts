@@ -1,16 +1,12 @@
-import * as THREE from "three";
-import { box, triangulate, type ShapeHandle } from "../core/api/api";
+import * as THREE from 'three';
+import { box, triangulate, type ShapeHandle } from '../core/api/api';
 
 /**
  * Create a simple box model via the public API and convert it into a Three.js mesh.
  */
-export async function createBoxModel(
-  w: number,
-  h: number,
-  d: number,
-): Promise<THREE.Mesh> {
+export async function createBoxModel(): Promise<THREE.Mesh> {
   // 1. Create the box in the kernel via the worker API
-  const handle: ShapeHandle = await box(w, h, d);
+  const handle: ShapeHandle = await box(40, 40, 40);
 
   // 2. Triangulate it using the worker
   const { vertices, normals, indices } = await triangulate(handle);
@@ -18,10 +14,10 @@ export async function createBoxModel(
   // 3. Build a rudimentary Three.js mesh from the triangulation
   const geometry = new THREE.BufferGeometry();
 
-  geometry.setAttribute("position", new THREE.BufferAttribute(vertices, 3));
+  geometry.setAttribute('position', new THREE.BufferAttribute(vertices, 3));
 
   if (normals && normals.length === vertices.length) {
-    geometry.setAttribute("normal", new THREE.BufferAttribute(normals, 3));
+    geometry.setAttribute('normal', new THREE.BufferAttribute(normals, 3));
   } else {
     geometry.computeVertexNormals();
   }
