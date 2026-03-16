@@ -1,16 +1,16 @@
 {
-	"singleQuote": true,
-	"trailingComma": "es5",
-	"printWidth": 100,
-	"singleAttributePerLine": true,
-	"bracketSameLine": true,
-	"endOfLine": "lf",
-	"overrides": [
-		{
-			"files": ["*.html"],
-			"options": {
-				"parser": "angular"
-			}
-		}
-	]
+  "singleQuote": true,
+  "trailingComma": "es5",
+  "printWidth": 100,
+  "singleAttributePerLine": true,
+  "bracketSameLine": true,
+  "endOfLine": "lf",
+  "overrides": [
+    {
+      "files": ["*.html"],
+      "options": {
+        "parser": "angular"
+      }
+    }
+  ]
 }

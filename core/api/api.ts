@@ -1,109 +1,31 @@
-export type ShapeHandle = string; // worker-side shape id
+import * as THREE from 'three';
+import { WorkerRequestType } from '../worker';
+import { callWorker } from '../worker/main';
+import { buildOpenCascadeShape } from './build-opencascade-shape';
+import { Shape } from './shape';
 
 const worker = new Worker(new URL('../worker/worker.ts', import.meta.url), {
   type: 'module',
 });
 
-let nextId = 1;
+export async function triangulate(shape: Shape): Promise<THREE.Mesh> {
+  // ! TODO: Separate THREEJS Mesh creation
+  const openCascadeShape = await buildOpenCascadeShape(shape);
 
-function getNextId(): string {
-  return String(nextId++);
-}
+  const triangulationResult = await callWorker(WorkerRequestType.Triangulate, openCascadeShape);
 
-// Pending promise resolvers, keyed by id
-const pending = new Map<
-  string,
-  {
-    resolve: (value: any) => void;
-    reject: (reason?: any) => void;
-  }
->();
+  const geometry = new THREE.BufferGeometry();
 
-let initListeners: Array<() => void> = [];
-let initDone = false;
+  geometry.setAttribute('position', new THREE.BufferAttribute(vertices, 3));
 
-export function onKernelInitialized(cb: () => void) {
-  if (initDone) {
-    cb();
+  if (normals && normals.length === vertices.length) {
+    geometry.setAttribute('normal', new THREE.BufferAttribute(normals, 3));
   } else {
-    initListeners.push(cb);
-  }
-}
-
-function notifyInitDone() {
-  initDone = true;
-  for (const cb of initListeners) cb();
-  initListeners = [];
-}
-
-worker.onmessage = (event: MessageEvent) => {
-  console.log('[core/api] got message', event.data);
-  const { type, id, result, error } = event.data;
-
-  if (type === 'INIT_DONE') {
-    console.log('[core/api] INIT_DONE received');
-    notifyInitDone();
+    geometry.computeVertexNormals();
   }
 
-  if (!id) return;
+  geometry.setIndex(new THREE.BufferAttribute(indices, 1));
 
-  const entry = pending.get(String(id));
-  if (!entry) return;
-
-  pending.delete(String(id));
-
-  if (type === 'ERROR' || error) {
-    entry.reject(new Error(error || 'Worker error'));
-  } else {
-    entry.resolve({ type, result });
-  }
-};
-
-function callWorker(message: any): Promise<any> {
-  const id = message.id ?? getNextId();
-  message.id = id;
-
-  console.log('[core/api] posting', message);
-
-  return new Promise((resolve, reject) => {
-    pending.set(String(id), { resolve, reject });
-    worker.postMessage(message);
-  });
-}
-
-// public API
-
-export async function initKernel(): Promise<void> {
-  if (initDone) return; // already initialized
-  await callWorker({ type: 'INIT' });
-}
-
-export async function box(w: number, h: number, d: number): Promise<ShapeHandle> {
-  console.log('[core/api] box called with', w, h, d);
-  const { result } = await callWorker({
-    type: 'CREATE_BOX',
-    payload: { width: w, height: h, depth: d },
-  });
-
-  return result as ShapeHandle;
-}
-
-/**
- * Triangulate any shape handle using the worker.
- * Returns the raw buffers as produced by TRIANGULATE_DONE.
- */
-export async function triangulate(shape: ShapeHandle): Promise<{
-  vertices: Float32Array;
-  normals: Float32Array;
-  indices: Uint32Array;
-}> {
-  const { result } = await callWorker({
-    type: 'TRIANGULATE',
-    payload: { shapeId: shape },
-  });
-  return result as {
-    vertices: Float32Array;
-    normals: Float32Array;
-    indices: Uint32Array;
-  };
+  const material = new THREE.MeshNormalMaterial({ wireframe: false });
+  return new THREE.Mesh(geometry, material);
 }

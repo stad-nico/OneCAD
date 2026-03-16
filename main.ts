@@ -1,4 +1,4 @@
-import { initKernel, onKernelInitialized } from './core/api/api';
+import { initKernel, onKernelInitialized } from '@opentscad/core';
 import { Renderer } from './renderer';
 
 const canvas = document.getElementById('scene') as HTMLCanvasElement;
@@ -24,9 +24,6 @@ onKernelInitialized(() => {
   build().catch((err) => console.error('Build failed', err));
 });
 
-/**
- * 🔥 HMR Hook
- */
 if (import.meta.hot) {
   import.meta.hot.accept('./models/box', async (newModule) => {
     console.log('Model changed — rebuilding...');
