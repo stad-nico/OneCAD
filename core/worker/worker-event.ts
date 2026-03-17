@@ -1,24 +1,17 @@
-import { TopoDS_Shape } from 'opencascade.js';
+import { Operation } from '../types/Operation';
+import { OperationCall } from '../types/Operations';
+import { TriangulationResult } from './triangulate';
 
 export enum WorkerRequestType {
   Initialize = 'Initialize',
-  Box = 'Box',
-  Triangulate = 'Triangulate',
+  Build = 'Build',
 }
 
 type WorkerRequestMapping = {
   [WorkerRequestType.Initialize]: { input: []; output: void };
-  [WorkerRequestType.Box]: {
-    input: [width: number, height: number, depth: number];
-    output: TopoDS_Shape;
-  };
-  [WorkerRequestType.Triangulate]: {
-    input: [shape: TopoDS_Shape];
-    output: {
-      vertices: Float32Array<ArrayBuffer>;
-      normals: Float32Array<ArrayBuffer>;
-      indices: Uint32Array<ArrayBuffer>;
-    };
+  [WorkerRequestType.Build]: {
+    input: [operations: Array<OperationCall<Operation>>];
+    output: TriangulationResult;
   };
 };
 

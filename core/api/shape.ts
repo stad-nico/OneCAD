@@ -2,9 +2,9 @@ import { Operation } from '../types/Operation';
 import { OperationCall } from '../types/Operations';
 
 export class Shape {
-  public readonly operations: Array<OperationCall<Operation>>;
+  public readonly operations: Array<OperationCall>;
 
-  public constructor(operations: Array<OperationCall<Operation>>) {
+  public constructor(operations: Array<OperationCall>) {
     this.operations = operations;
   }
 

@@ -8,3 +8,17 @@ export enum Operation {
   Box = 'box',
   Triangulate = 'triangulate',
 }
+
+export type OperationParamsMap = {
+  [Operation.Box]: {
+    width: number;
+    height: number;
+    depth: number;
+  };
+
+  [Operation.Translate]: {
+    x: number;
+    y: number;
+    z: number;
+  };
+};

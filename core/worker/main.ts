@@ -27,7 +27,7 @@ export function callWorker<MessageType extends WorkerRequestType>(
   const message: WorkerRequest<MessageType> = { type, id: crypto.randomUUID(), data: args };
 
   const promise = new Promise<WorkerResponseData[MessageType]>((resolve, reject) =>
-    pending.set(message.id, { resolve, reject })
+    pending.set(message.id, { resolve: resolve as (value: unknown) => void, reject })
   );
 
   Logger.debug(`[API] Sending message to worker: ${type} with id ${message.id}`, { message });
@@ -40,7 +40,7 @@ export function callWorker<MessageType extends WorkerRequestType>(
 worker.onmessage = (event: MessageEvent<WorkerResponse>) => {
   const { status, id, error, response } = event.data;
 
-  const handler = pending.get(event.data.id);
+  const handler = pending.get(id);
 
   if (!handler) {
     Logger.warn(`[API] No pending promise for message id ${id}, ignoring response`);

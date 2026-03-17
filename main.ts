@@ -1,4 +1,4 @@
-import { initKernel, onKernelInitialized } from '@opentscad/core';
+import { initializeCore } from './core';
 import { Renderer } from './renderer';
 
 const canvas = document.getElementById('scene') as HTMLCanvasElement;
@@ -17,11 +17,9 @@ async function build() {
   renderer.render();
 }
 
-// Kick off kernel init and, once ready, build the model
-initKernel().catch((err) => console.error('Kernel init failed', err));
-onKernelInitialized(() => {
-  console.log('Kernel initialized, building first model');
-  build().catch((err) => console.error('Build failed', err));
+initializeCore().then(() => {
+  console.log('Core initialized, building model...');
+  build();
 });
 
 if (import.meta.hot) {

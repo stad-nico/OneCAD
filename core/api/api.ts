@@ -1,18 +1,17 @@
 import * as THREE from 'three';
-import { WorkerRequestType } from '../worker';
 import { callWorker } from '../worker/main';
-import { buildOpenCascadeShape } from './build-opencascade-shape';
+import { WorkerRequestType } from '../worker/worker-event';
 import { Shape } from './shape';
 
-const worker = new Worker(new URL('../worker/worker.ts', import.meta.url), {
-  type: 'module',
-});
+export async function initializeCore(): Promise<void> {
+  return await callWorker(WorkerRequestType.Initialize);
+}
 
 export async function triangulate(shape: Shape): Promise<THREE.Mesh> {
-  // ! TODO: Separate THREEJS Mesh creation
-  const openCascadeShape = await buildOpenCascadeShape(shape);
-
-  const triangulationResult = await callWorker(WorkerRequestType.Triangulate, openCascadeShape);
+  const { vertices, normals, indices } = await callWorker(
+    WorkerRequestType.Build,
+    shape.operations
+  );
 
   const geometry = new THREE.BufferGeometry();
 

@@ -1,7 +1,10 @@
-import { Operation } from './Operation';
+import { Operation, OperationParamsMap } from './Operation';
 
-export type OperationCall<OperationType extends Operation> = {
-  type: OperationType;
+type OperationKey = keyof OperationParamsMap;
 
-  parameters: unknown;
-};
+export type OperationCall = {
+  [K in OperationKey]: {
+    type: Extract<Operation, K>;
+    parameters: OperationParamsMap[K];
+  };
+}[OperationKey];

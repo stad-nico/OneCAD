@@ -3,10 +3,16 @@ import wasm from 'vite-plugin-wasm';
 import topLevelAwait from 'vite-plugin-top-level-await';
 
 export default defineConfig({
-  plugins: [wasm(), topLevelAwait()],
+  plugins: [topLevelAwait()],
   resolve: {
     alias: {
       '@opentscad/core': '/core/index.ts',
+    },
+  },
+  assetsInclude: ['**/*.wasm'],
+  build: {
+    rollupOptions: {
+      external: ['opencascade.js/dist/opencascade.full.wasm'],
     },
   },
 });
