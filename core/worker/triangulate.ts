@@ -11,11 +11,7 @@ export function triangulate(oc: OpenCascadeInstance, shape: TopoDS_Shape): Trian
   const linearDeflection = 0.5;
   new oc.BRepMesh_IncrementalMesh_2(shape, linearDeflection, false, 0.5, true);
   const loc = new oc.TopLoc_Location_1();
-  const explorer = new oc.TopExp_Explorer_2(
-    shape,
-    (oc.TopAbs_ShapeEnum as any).TopAbs_FACE,
-    (oc.TopAbs_ShapeEnum as any).TopAbs_SHAPE
-  );
+  const explorer = new oc.TopExp_Explorer_2(shape, (oc.TopAbs_ShapeEnum as any).TopAbs_FACE, (oc.TopAbs_ShapeEnum as any).TopAbs_SHAPE);
   const vertices: number[] = [];
   const normals: number[] = [];
   const indices: number[] = [];
@@ -39,7 +35,7 @@ export function triangulate(oc: OpenCascadeInstance, shape: TopoDS_Shape): Trian
         hasNormals = true;
         for (let i = 1; i <= numNodes; i++) {
           const normal = new oc!.gp_Dir_1();
-          tr.Normal(i, normal);
+          // tr.Normal_1(i, normal);
           normals.push(normal.X(), normal.Y(), normal.Z());
           normal.delete();
         }

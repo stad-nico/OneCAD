@@ -1,9 +1,12 @@
 import { defineConfig } from 'vite';
-import wasm from 'vite-plugin-wasm';
-import topLevelAwait from 'vite-plugin-top-level-await';
+import angular from '@analogjs/vite-plugin-angular';
 
 export default defineConfig({
-  plugins: [topLevelAwait()],
+  plugins: [
+    angular({
+      tsconfig: './angular/tsconfig.app.json',
+    }),
+  ],
   resolve: {
     alias: {
       '@opentscad/core': '/core/index.ts',

@@ -16,7 +16,7 @@ const pending: Map<
   }
 > = new Map();
 
-const worker = new Worker(new URL('./worker.ts', import.meta.url), {
+const worker = new Worker(new URL('./worker.ts?worker', import.meta.url), {
   type: 'module',
 });
 

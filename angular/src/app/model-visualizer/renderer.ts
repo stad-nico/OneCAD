@@ -10,12 +10,7 @@ export class Renderer {
   constructor(canvas: HTMLCanvasElement) {
     this.scene.background = new THREE.Color(0x000000); // Black background
 
-    this.camera = new THREE.PerspectiveCamera(
-      75,
-      window.innerWidth / window.innerHeight,
-      0.1,
-      1000
-    );
+    this.camera = new THREE.PerspectiveCamera(75, window.innerWidth / window.innerHeight, 0.1, 1000);
 
     this.renderer = new THREE.WebGLRenderer({ canvas, antialias: true });
     this.renderer.setSize(window.innerWidth, window.innerHeight);
@@ -77,12 +72,8 @@ export class Renderer {
     });
 
     // Override the internal mouse move handling for panning conditionally
-    const originalHandleMouseMoveRotate = (this.controls as any).handleMouseMoveRotate?.bind(
-      this.controls
-    );
-    const originalHandleMouseMovePan = (this.controls as any).handleMouseMovePan?.bind(
-      this.controls
-    );
+    const originalHandleMouseMoveRotate = (this.controls as any).handleMouseMoveRotate?.bind(this.controls);
+    const originalHandleMouseMovePan = (this.controls as any).handleMouseMovePan?.bind(this.controls);
 
     if (originalHandleMouseMoveRotate && originalHandleMouseMovePan) {
       (this.controls as any).handleMouseMoveRotate = function (event: MouseEvent) {
@@ -116,9 +107,7 @@ export class Renderer {
 
   clear() {
     // Recreate scene and keep lights and grid
-    const childrenToRemove = this.scene.children.filter(
-      (child) => child instanceof THREE.Mesh && !(child instanceof THREE.GridHelper)
-    );
+    const childrenToRemove = this.scene.children.filter((child) => child instanceof THREE.Mesh && !(child instanceof THREE.GridHelper));
 
     childrenToRemove.forEach((child) => {
       this.scene.remove(child);
@@ -136,6 +125,7 @@ export class Renderer {
   }
 
   addMesh(mesh: THREE.Mesh) {
+    console.log('Adding mesh to scene:', mesh);
     this.scene.add(mesh);
   }
 }

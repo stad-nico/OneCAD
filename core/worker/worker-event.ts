@@ -1,16 +1,13 @@
-import { Operation } from '../types/Operation';
 import { OperationCall } from '../types/Operations';
 import { TriangulationResult } from './triangulate';
 
 export enum WorkerRequestType {
-  Initialize = 'Initialize',
   Build = 'Build',
 }
 
 type WorkerRequestMapping = {
-  [WorkerRequestType.Initialize]: { input: []; output: void };
   [WorkerRequestType.Build]: {
-    input: [operations: Array<OperationCall<Operation>>];
+    input: [operations: Array<OperationCall>];
     output: TriangulationResult;
   };
 };

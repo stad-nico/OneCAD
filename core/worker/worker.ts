@@ -8,33 +8,29 @@ import { WorkerRequest, WorkerRequestType } from './worker-event';
 
 export let openCascadeInstance: OpenCascadeInstance | null = null;
 
+let initializationStarted = false;
+
 export const QUEUED_REQUESTS: Array<WorkerRequest> = [];
 
 self.onmessage = async (event: MessageEvent<WorkerRequest>) => {
+  console.log('[Worker] Received message', event);
   Logger.info('[Worker] Received message', { event });
 
   return await handleRequest(event.data);
 };
 
 export async function handleRequest(request: WorkerRequest): Promise<void> {
-  const { type } = request;
-
-  if (type === WorkerRequestType.Initialize) {
-    await initOpenCascade();
-
-    self.postMessage({
-      type: WorkerRequestType.Initialize,
-      status: 'success',
-      id: request.id,
-    });
-  }
-
   if (!openCascadeInstance) {
     Logger.warn('[Worker] OpenCascade instance not initialized yet, queuing request', {
       request,
     });
 
     QUEUED_REQUESTS.push(request);
+
+    if (!initializationStarted) {
+      await initOpenCascade();
+    }
+
     return;
   }
 
@@ -60,6 +56,8 @@ async function initOpenCascade(): Promise<void> {
     return;
   }
 
+  initializationStarted = true;
+
   Logger.info('[Worker] Initializing OpenCascade...');
 
   if (openCascadeInstance) {
@@ -80,7 +78,7 @@ async function initOpenCascade(): Promise<void> {
   }
 
   try {
-    Logger.info('[Worker] Processing queued requests', { count: QUEUED_REQUESTS.length });
+    Logger.info('[Worker] Processing queued requests', { QUEUED_REQUESTS });
 
     for (const request of QUEUED_REQUESTS) {
       await handleRequest(request);

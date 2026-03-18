@@ -1,26 +1,9 @@
-import { initializeCore } from './core';
-import { Renderer } from './renderer';
+import { bootstrapApplication } from '@angular/platform-browser';
+import { AppComponent } from './angular/src/app/app.component';
+import { appConfig } from './angular/src/app/app.config';
+import './core/worker/worker';
 
-const canvas = document.getElementById('scene') as HTMLCanvasElement;
-
-const renderer = new Renderer(canvas);
-
-async function build() {
-  console.log('Building model...');
-
-  const { createBoxModel } = await import('./models/box');
-
-  const mesh = await createBoxModel();
-
-  renderer.clear();
-  renderer.addMesh(mesh);
-  renderer.render();
-}
-
-initializeCore().then(() => {
-  console.log('Core initialized, building model...');
-  build();
-});
+bootstrapApplication(AppComponent, appConfig).catch((err) => console.error(err));
 
 if (import.meta.hot) {
   import.meta.hot.accept('./models/box', async (newModule) => {
@@ -29,8 +12,6 @@ if (import.meta.hot) {
     const mod = newModule ?? (await import('./models/box'));
     const mesh = await mod.createBoxModel();
 
-    renderer.clear();
-    renderer.addMesh(mesh);
-    renderer.render();
+    console.log('Updating model in renderer...');
   });
 }

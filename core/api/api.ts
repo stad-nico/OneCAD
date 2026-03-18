@@ -3,15 +3,8 @@ import { callWorker } from '../worker/main';
 import { WorkerRequestType } from '../worker/worker-event';
 import { Shape } from './shape';
 
-export async function initializeCore(): Promise<void> {
-  return await callWorker(WorkerRequestType.Initialize);
-}
-
 export async function triangulate(shape: Shape): Promise<THREE.Mesh> {
-  const { vertices, normals, indices } = await callWorker(
-    WorkerRequestType.Build,
-    shape.operations
-  );
+  const { vertices, normals, indices } = await callWorker(WorkerRequestType.Build, shape.operations);
 
   const geometry = new THREE.BufferGeometry();
 
@@ -25,6 +18,12 @@ export async function triangulate(shape: Shape): Promise<THREE.Mesh> {
 
   geometry.setIndex(new THREE.BufferAttribute(indices, 1));
 
-  const material = new THREE.MeshNormalMaterial({ wireframe: false });
+  // Use a neutral gray physically-based material similar to common DCC defaults
+  const material = new THREE.MeshStandardMaterial({
+    color: 0x808080,
+    metalness: 0.0,
+    roughness: 0.5,
+  });
+
   return new THREE.Mesh(geometry, material);
 }
