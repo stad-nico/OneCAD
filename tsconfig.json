@@ -1,13 +1,13 @@
 {
-  "compilerOptions": {
-    "module": "esnext",
-    "experimentalDecorators": true,
-    "strict": true,
-    "types": ["vite/client"],
-    "lib": ["ES2015", "DOM"],
-    "moduleResolution": "bundler",
-    "paths": {
-      "@opentscad/core": ["./core/index.ts"]
-    }
-  }
+	"compilerOptions": {
+		"module": "esnext",
+		"experimentalDecorators": true,
+		"strict": true,
+		"types": ["vite/client", "node"],
+		"lib": ["ES2015", "DOM"],
+		"moduleResolution": "bundler",
+		"paths": {
+			"@opentscad/core": ["./core/index.ts"]
+		}
+	}
 }
