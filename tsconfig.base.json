@@ -1,0 +1,22 @@
+{
+  "compilerOptions": {
+    "target": "es2022",
+    "module": "preserve",
+
+    "strict": true,
+    "noImplicitAny": true,
+    "strictNullChecks": true,
+    "noUncheckedIndexedAccess": true,
+    "noFallthroughCasesInSwitch": true,
+    "noUnusedParameters": true,
+    "noPropertyAccessFromIndexSignature": true,
+    "useUnknownInCatchVariables": true,
+    "forceConsistentCasingInFileNames": true,
+
+    "esModuleInterop": true,
+    "resolveJsonModule": true,
+
+    "declaration": true,
+    "sourceMap": true
+  }
+}
