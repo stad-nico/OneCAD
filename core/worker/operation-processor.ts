@@ -1,12 +1,12 @@
 import { OpenCascadeInstance, TopoDS_Shape } from 'opencascade.js/dist/opencascade.full.js';
-import { OperationParamsMap } from '../types/Operation';
+import { OperationParamsMap } from '../shared/types/operation';
 
 type OperationKey = keyof OperationParamsMap;
 
 export type OperationProcessor<Type extends OperationKey = OperationKey> = (
 	openCascade: OpenCascadeInstance,
 	input: TopoDS_Shape | undefined,
-	params: OperationParamsMap[Type]
+	params: unknown
 ) => Promise<TopoDS_Shape>;
 
 const OperationProcessors: {
@@ -14,7 +14,7 @@ const OperationProcessors: {
 } = {};
 
 export function OperationProcessor(type: OperationKey): MethodDecorator {
-	return (target: object, propertyKey: string | symbol, descriptor: any): void => {
+	return (target: object, propertyKey: string | symbol, descriptor: PropertyDescriptor): void => {
 		if (!descriptor.value) {
 			throw new Error(`Method ${String(propertyKey)} has no implementation.`);
 		}

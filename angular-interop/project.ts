@@ -1,4 +1,4 @@
-import { Model } from './model';
+import { Model } from '../core/api/model';
 
 export interface Project {
 	/**

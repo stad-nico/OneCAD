@@ -1,3 +1,4 @@
+export * from '../plugin';
 export * from './api';
-export * from './primitives';
-export * from './shape';
+
+export * from './operations';

@@ -2,29 +2,38 @@ import chokidar from 'chokidar';
 import * as fs from 'fs';
 import * as path from 'path';
 import WebSocket from 'ws';
+import { ModelUpdateMessage, PluginEventType } from './core/network';
 import { Logger } from './core/shared/logger';
 
 const VITE_WS_URL = process.env.VITE_WS_URL || 'ws://localhost:5174';
-const modelsDir = path.resolve(process.cwd(), 'models');
+const ABSOLUTE_MODELS_DIR = path.resolve(process.cwd(), 'models');
+const RECONNECT_DELAY_MS = 2000;
 
-Logger.info(`[debug] Checking path: ${modelsDir}`);
-Logger.info(`[debug] Exists: ${fs.existsSync(modelsDir)}`);
-const watchPattern = path.join(modelsDir, '**', '*.model.ts').replace(/\\/g, '/');
+let ws: WebSocket | null = null;
+let reconnectTimeout: NodeJS.Timeout | null = null;
+const pendingMessages: string[] = [];
 
-Logger.info(`[client] Initializing watcher on: ${watchPattern}`);
-Logger.info(`[debug] Files found via readdir: ${JSON.stringify(fs.readdirSync(modelsDir))}`);
+function initWatcher() {
+	Logger.info(`[debug] Watching directory: ${ABSOLUTE_MODELS_DIR}`);
 
-const absoluteModelsDir = path.resolve(process.cwd(), 'models');
+	const watcher = chokidar.watch(ABSOLUTE_MODELS_DIR, {
+		usePolling: true,
+		interval: 100,
+		ignoreInitial: false,
+		depth: 99,
+	});
 
-const watcher = chokidar.watch(absoluteModelsDir, {
-	usePolling: true,
-	interval: 100,
-	ignoreInitial: false,
-	depth: 99,
-});
+	watcher.on('change', onChange);
+
+	watcher.on('ready', () => {
+		const watched = watcher.getWatched();
+		Logger.info('[client] Watcher ready. Paths:', JSON.stringify(watched, null, 2));
+	});
+
+	return watcher;
+}
 
 function onChange(filePath: string) {
-	// Only process .model.ts files
 	if (!filePath.endsWith('.model.ts')) return;
 
 	const normalizedPath = filePath.replace(/\\/g, '/');
@@ -37,33 +46,49 @@ function onChange(filePath: string) {
 		}
 
 		sendModelUpdate({
-			type: 'MODEL_UPDATE',
+			type: PluginEventType.ModelUpdate,
 			file: normalizedPath,
 			code,
 		});
 	});
 }
 
-watcher.on('ready', () => {
-	const watched = watcher.getWatched();
-	Logger.info('[client] Watcher ready. Paths:', JSON.stringify(watched, null, 2));
-});
+function sendModelUpdate(payload: ModelUpdateMessage) {
+	const msg = JSON.stringify(payload);
 
-const pendingMessages: string[] = [];
-
-let ws: WebSocket | null = null;
-let reconnectTimeout: NodeJS.Timeout | null = null;
-const RECONNECT_DELAY_MS = 2000;
+	if (ws && ws.readyState === WebSocket.OPEN) {
+		ws.send(msg);
+		Logger.info('[client] Sent MODEL_UPDATE', { file: payload.file });
+	} else {
+		Logger.warn('[client] WebSocket not open, queuing message', { file: payload.file });
+		pendingMessages.push(msg);
+	}
+}
 
 function scheduleReconnect() {
-	if (reconnectTimeout) {
-		return;
-	}
+	if (reconnectTimeout) return;
+
 	Logger.info('[client] Scheduling WebSocket reconnect', { delay: RECONNECT_DELAY_MS });
 	reconnectTimeout = setTimeout(() => {
 		reconnectTimeout = null;
 		connectWebSocket();
 	}, RECONNECT_DELAY_MS);
+}
+
+function flushPendingMessages() {
+	if (pendingMessages.length > 0) {
+		Logger.info('[client] Flushing queued MODEL_UPDATE messages', { count: pendingMessages.length });
+		while (pendingMessages.length > 0 && ws && ws.readyState === WebSocket.OPEN) {
+			const msg = pendingMessages.shift();
+			if (!msg) continue;
+			try {
+				ws.send(msg);
+			} catch (err) {
+				Logger.error('[client] Error sending queued MODEL_UPDATE', { err });
+				break;
+			}
+		}
+	}
 }
 
 function connectWebSocket() {
@@ -84,63 +109,27 @@ function connectWebSocket() {
 
 	ws.on('open', () => {
 		Logger.info('[client] Connected to Vite WebSocket');
-
-		if (pendingMessages.length > 0) {
-			Logger.info('[client] Flushing queued MODEL_UPDATE messages', { count: pendingMessages.length });
-			while (pendingMessages.length > 0 && ws && ws.readyState === WebSocket.OPEN) {
-				const msg = pendingMessages.shift();
-				if (!msg) continue;
-				try {
-					ws.send(msg);
-				} catch (err) {
-					Logger.error('[client] Error sending queued MODEL_UPDATE', { err });
-					break;
-				}
-			}
-		}
+		flushPendingMessages();
 	});
 
 	ws.on('error', (err) => {
 		Logger.error('[client] WebSocket error', { err });
+		// Usually 'close' event follows, but in some node versions/cases it might not for connection refused
+		// We rely on 'close' to trigger reconnect usually, but for initial connection fail handle here?
+		// Actually ws emits error then close.
 	});
 
-	ws.on('close', (code, reason) => {
-		Logger.warn('[client] WebSocket closed', { code, reason: reason?.toString() });
+	ws.on('close', () => {
+		Logger.info('[client] WebSocket closed');
 		ws = null;
 		scheduleReconnect();
 	});
 }
 
+// Start
+initWatcher();
 connectWebSocket();
 
-watcher.on('add', onChange);
-watcher.on('change', onChange);
-
-watcher.on('ready', () => {
-	const watchedPaths = watcher.getWatched();
-	Logger.info('[client] Watcher is ready.');
-	Logger.info('[client] Currently watching:', JSON.stringify(watchedPaths, null, 2));
-});
-
-watcher.on('error', (err) => Logger.error('[client] Watcher error', { err }));
-
-function sendModelUpdate(msg: { type: 'MODEL_UPDATE'; file: string; code: string }) {
-	const payload = JSON.stringify(msg);
-
-	if (ws && ws.readyState === WebSocket.OPEN) {
-		try {
-			ws.send(payload);
-			Logger.info(`[client] Sent MODEL_UPDATE for ${msg.file}`);
-		} catch (err) {
-			Logger.error('[client] Error sending MODEL_UPDATE, queueing instead', { err, file: msg.file });
-			pendingMessages.push(payload);
-		}
-		return;
-	}
-
-	Logger.warn('[client] WebSocket not open, queueing MODEL_UPDATE', { file: msg.file });
-	pendingMessages.push(payload);
-}
 process.on('uncaughtException', (err) => {
 	Logger.error('[client] Uncaught exception', { err });
 });

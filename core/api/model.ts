@@ -1,4 +1,4 @@
-import { Mesh } from 'three';
+import { Shape } from '../shape';
 
 export interface Model {
 	/**
@@ -12,7 +12,12 @@ export interface Model {
 	name: string;
 
 	/**
-	 * The THREEJS mesh of the model, fully triangulated.
+	 * An optional description of the model.
 	 */
-	mesh: Mesh;
+	description?: string;
+
+	/**
+	 * The shape of the model.
+	 */
+	shape: Shape;
 }
