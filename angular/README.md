@@ -1,59 +1,170 @@
-# Angular
+# OpenTSCAD Frontend Documentation
 
-This project was generated using [Angular CLI](https://github.com/angular/angular-cli) version 20.1.3.
+The OpenTSCAD frontend is a modern Angular application providing an intuitive interface for multi-project 3D CAD model management and visualization.
 
-## Development server
+## Overview
 
-To start a local development server, run:
+The frontend architecture is built on Angular 18+ with standalone components, signals-based reactivity, and a comprehensive routing system that supports multi-project workflows.
 
-```bash
-ng serve
+```
+angular/src/app/
+├── main-view/              # Primary layout and navigation
+├── model-visualizer/       # 3D rendering with Three.js
+├── project-manager/        # Multi-project management
+│   ├── project-list/       # Project browser and creation
+│   └── model-list/         # Model browser within projects
+├── app.routes.ts           # URL routing configuration
+├── app.component.ts        # Root application component
+└── app.config.ts          # Application configuration
 ```
 
-Once the server is running, open your browser and navigate to `http://localhost:4200/`. The application will automatically reload whenever you modify any of the source files.
+## Architecture Principles
 
-## Code scaffolding
+### 1. Standalone Components
+All components are standalone, reducing bundle size and improving modularity:
 
-Angular CLI includes powerful code scaffolding tools. To generate a new component, run:
-
-```bash
-ng generate component component-name
+```typescript
+@Component({
+  selector: 'app-project-manager',
+  templateUrl: './project-manager.component.html',
+  styleUrls: ['./project-manager.component.css'],
+  imports: [CommonModule, FormsModule, ProjectListComponent, ModelListComponent]
+})
+export class ProjectManagerComponent {
+  // Component implementation
+}
 ```
 
-For a complete list of available schematics (such as `components`, `directives`, or `pipes`), run:
+### 2. Signals-Based Reactivity
+Uses Angular's new signals for efficient, reactive state management:
 
-```bash
-ng generate --help
+```typescript
+export class ProjectManagerComponent {
+  readonly projects = signal<ProjectInfo[]>([]);
+  readonly selectedProjectId = signal<string | null>(null);
+  
+  readonly selectedProject = computed(() => {
+    const projectId = this.selectedProjectId();
+    return this.projects().find(p => p.id === projectId) || null;
+  });
+}
 ```
 
-## Building
+### 3. Type-Safe Data Flow
+Comprehensive TypeScript interfaces ensure type safety throughout:
 
-To build the project run:
+```typescript
+interface ProjectInfo {
+  readonly id: string;
+  readonly name: string;
+  readonly description?: string;
+  readonly modelCount: number;
+  readonly createdAt: Date;
+  readonly updatedAt: Date;
+}
 
-```bash
-ng build
+interface ModelInfo {
+  readonly id: string;
+  readonly projectId: string;
+  readonly name: string;
+  readonly tags: string[];
+  readonly createdAt: Date;
+  readonly updatedAt: Date;
+  readonly version: number;
+}
 ```
 
-This will compile your project and store the build artifacts in the `dist/` directory. By default, the production build optimizes your application for performance and speed.
+## Component Architecture
 
-## Running unit tests
+### MainViewComponent
 
-To execute unit tests with the [Karma](https://karma-runner.github.io) test runner, use the following command:
+The primary layout component that orchestrates the entire interface:
 
-```bash
-ng test
+```typescript
+@Component({
+  selector: 'app-main-view',
+  templateUrl: './main-view.component.html',
+  styleUrls: ['./main-view.component.css'],
+  imports: [CommonModule, ProjectManagerComponent, ModelVisualizerComponent]
+})
+export class MainViewComponent {
+  readonly projectId = signal<string | null>(null);
+  readonly modelId = signal<string | null>(null);
+  readonly isProjectManagerVisible = signal(true);
+  
+  readonly currentView = computed(() => {
+    // Returns 'model', 'project', or 'default' based on route params
+  });
+}
 ```
 
-## Running end-to-end tests
+#### Key Features
 
-For end-to-end (e2e) testing, run:
+- **Route-Aware Navigation**: Responds to URL changes and updates UI accordingly
+- **Responsive Layout**: Collapsible project manager panel with smooth transitions
+- **Breadcrumb Navigation**: Clear hierarchy showing current project and model
+- **Overlay States**: Loading indicators and empty state messages
 
-```bash
-ng e2e
+### ProjectManagerComponent
+
+Central hub for project and model organization:
+
+```typescript
+export class ProjectManagerComponent {
+  // State management
+  readonly projects = signal<ProjectInfo[]>([]);
+  readonly models = signal<ModelInfo[]>([]);
+  readonly selectedProjectId = signal<string | null>(null);
+  readonly selectedModelId = signal<string | null>(null);
+  
+  // Methods
+  createProject(name: string, description?: string): void;
+  deleteProject(projectId: string): void;
+  addOrUpdateModel(modelInfo: Partial<ModelInfo>): void;
+  removeModel(modelId: string, projectId: string): void;
+}
 ```
 
-Angular CLI does not come with an end-to-end testing framework by default. You can choose one that suits your needs.
+#### Project Management Features
 
-## Additional Resources
+- **Create Projects**: Interactive form with validation
+- **Delete Projects**: Confirmation dialog with cascade delete warning
+- **Project Statistics**: Real-time counts of projects, models, and active project
+- **Default Project**: Automatic "local" project for backward compatibility
 
-For more information on using the Angular CLI, including detailed command references, visit the [Angular CLI Overview and Command Reference](https://angular.dev/tools/cli) page.
+## Development Workflow
+
+### Local Development
+
+```bash
+# Start Angular development server
+cd angular
+npm run dev
+
+# Server runs on http://localhost:4200 with hot reloading
+```
+
+### Building for Production
+
+```bash
+# Build optimized bundle
+npm run build
+
+# Output in dist/ directory ready for deployment
+```
+
+### Integration Testing
+
+```bash
+# Start full system (server + frontend + CLI)
+# Terminal 1: Start main server
+npm run dev
+
+# Terminal 2: Start CLI client
+cd my-project  
+npx @opentscad/cli dev
+
+# Test end-to-end workflow
+```
+
+For complete documentation including component details, routing system, performance optimizations, and testing strategies, see the [full frontend documentation](https://opentscad.dev/docs/frontend).

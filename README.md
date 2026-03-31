@@ -1,217 +1,166 @@
-# OpenTSCAD
+# OpenTSCAD - TypeScript-based 3D CAD Modeling
 
-OpenTSCAD is a TypeScript-based CAD playground built on top of OpenCascade running in a Web Worker and rendered with Three.js.
+[![TypeScript](https://img.shields.io/badge/TypeScript-5.x-blue.svg)](https://www.typescriptlang.org/)
+[![Node.js](https://img.shields.io/badge/Node.js-18+-green.svg)](https://nodejs.org/)
+[![Angular](https://img.shields.io/badge/Angular-18+-red.svg)](https://angular.io/)
+[![License](https://img.shields.io/badge/License-MIT-yellow.svg)](LICENSE)
 
-## Architecture Overview
+OpenTSCAD is a modern, TypeScript-based 3D CAD modeling system that enables developers to create complex 3D models using familiar programming paradigms. With our new **multi-repository architecture**, teams can work on distributed model projects while sharing a centralized visualization server.
 
-The system is now structured as a **client–server live modeling pipeline** on top of Vite and Angular:
+## 🚀 Quick Start
 
-- **Vite + Angular dev server (browser frontend)**
-  - Serves the Angular app and Three.js renderer
-  - Hosts a custom Vite plugin that receives model updates over WebSockets
-  - Runs the CAD pipeline (via the existing Web Worker) and broadcasts mesh results back to the browser via Vite's HMR WebSocket
-- **CAD Worker (Web Worker)**
-  - Holds the OpenCascade WebAssembly instance
-  - Receives high-level CAD `operations[]`
-  - Builds shapes and triangulates them into mesh data
-- **Model client (Node.js watcher)**
-  - Runs as a separate Node process
-  - Watches model `.ts` files in your project
-  - Sends updated model source code to the Vite dev server over WebSockets
-
-This gives you a fast, HMR-like loop for CAD models: edit a `.ts` model file, and the rendered model in the browser updates automatically without a page reload.
-
-## Live Model Flow
-
-End-to-end, the flow looks like this:
-
-1. **Model Authoring (external project or repo)**
-   - You write models as TypeScript modules, e.g. `models/my-model.ts`:
-
-     ```ts
-     import { box } from '@opentscad/core';
-
-     export default () => box(20, 10, 5).translate(0, 0, 10);
-     ```
-
-   - Each model module must export a **default function** that returns a `Shape` (from `@opentscad/core`). Internally, a `Shape` contains the `operations[]` used by the CAD worker.
-
-2. **Model Client (Node.js watcher)**
-   - The file `client.ts` runs in Node, using `chokidar` to watch your model files:
-     - Watches `models/**/*.ts` by default (configurable via `MODEL_GLOB`)
-     - Connects to the Vite dev server WebSocket (default `ws://localhost:5173`, configurable via `VITE_WS_URL`)
-   - On file add/change, it:
-     - Reads the file contents
-     - Logs via the shared `Logger` at appropriate levels (`info`, `debug`, `warn`, `error`)
-     - Sends a JSON message over WebSocket:
-
-       ```ts
-       {
-         type: 'MODEL_UPDATE',
-         file: string; // absolute path to the file
-         code: string; // full TypeScript source of the model
-       }
-       ```
-
-3. **Vite Dev Server + Custom Plugin**
-   - The Vite config (`vite.config.js`) stays small and only wires up the Angular plugin and a custom **OpenTSCAD model plugin**:
-
-     ```ts
-     import { defineConfig } from 'vite';
-     import angular from '@analogjs/vite-plugin-angular';
-     import { opentscadModelPlugin } from './vite-plugin-opentscad';
-
-     export default defineConfig({
-       plugins: [
-         angular({ tsconfig: './angular/tsconfig.app.json' }),
-         opentscadModelPlugin(),
-       ],
-       // ...existing config...
-     });
-     ```
-
-   - The actual plugin implementation lives in `vite-plugin-opentscad.ts` (TypeScript), keeping the Vite config uncluttered.
-   - The plugin hooks into Vite's dev server and its WebSocket server:
-     - Listens for raw WebSocket messages from the Node client
-     - Parses `MODEL_UPDATE` JSON messages
-     - Uses `esbuild.transform` to transpile the incoming TypeScript source to ESM JavaScript:
-
-       ```ts
-       await esbuild.transform(code, {
-         loader: 'ts',
-         format: 'esm',
-         target: 'esnext',
-       });
-       ```
-
-     - Dynamically executes the module via a `data:` URL and `import()`:
-
-       ```ts
-       const base64 = Buffer.from(jsCode, 'utf8').toString('base64');
-       const url = `data:text/javascript;base64,${base64}`;
-       const mod = await import(url);
-       const shape = await mod.default();
-       ```
-
-     - Expects `default()` to return a `Shape`-like object with an `operations` array.
-     - Calls the existing core API `triangulate(shape)`:
-       - Under the hood this uses `callWorker(WorkerRequestType.Build, shape.operations)` to talk to the CAD worker
-       - The worker builds the OpenCascade shape and triangulates it into typed arrays (vertices, normals, indices)
-     - Broadcasts the mesh to all connected Vite HMR clients using a **custom HMR event**:
-
-       ```ts
-       server.ws.send({
-         type: 'custom',
-         event: 'MODEL_RESULT',
-         data: {
-           mesh: {
-             vertices: Float32Array | number[],
-             normals: Float32Array | number[] | null,
-             indices: Uint32Array | number[] | null,
-           },
-         },
-       });
-       ```
-
-     - All of these steps are logged through the shared `Logger` with suitable log levels.
-
-4. **CAD Worker (Web Worker + OpenCascade)**
-   - Lives under `core/worker/`.
-   - Receives `Build` requests via `callWorker(WorkerRequestType.Build, operations)`.
-   - Uses OpenCascade to:
-     - Construct the B-Rep shape from the operations
-     - Triangulate it (see `triangulate.ts`)
-   - Returns a `TriangulationResult`:
-
-     ```ts
-     interface TriangulationResult {
-       vertices: Float32Array;
-       normals: Float32Array;
-       indices: Uint32Array;
-     }
-     ```
-
-   - The worker is initialized only once; subsequent builds reuse the same WebAssembly instance for fast iterations.
-
-5. **Angular Frontend + Three.js Renderer**
-   - The Angular app lives under `angular/src/app`.
-   - The main visual component is `ModelVisualizerComponent`, which owns a `Renderer` (Three.js wrapper):
-     - `Renderer` sets up the scene, camera, lights, grid, and OrbitControls
-     - Provides `clear()` and `addMesh(mesh)` methods
-   - The component subscribes to the custom Vite HMR event `MODEL_RESULT`:
-
-     ```ts
-     if (import.meta && (import.meta as any).hot) {
-       (import.meta as any).hot.on('MODEL_RESULT', (payload: any) => {
-         this.updateMeshFromWorker(payload.data.mesh);
-       });
-     }
-     ```
-
-   - On `MODEL_RESULT`, it:
-     - Clears existing meshes from the scene
-     - Reconstructs a `THREE.BufferGeometry` from the raw arrays
-     - Builds a `THREE.Mesh` with a neutral material
-     - Adds it to the scene via `Renderer.addMesh(mesh)`
-   - The render loop is continuous, so updates are visible immediately without reloading the page.
-
-## Running the System
-
-### 1. Start the Vite + Angular dev server
-
-From the project root:
+### For New Projects
 
 ```bash
-npm install
+# Install the CLI globally
+npm install -g @opentscad/cli
+
+# Create a new project
+mkdir my-cad-project
+cd my-cad-project
+npx @opentscad/cli init
+
+# Start developing
 npm run dev
 ```
 
-This starts Vite (default at `http://localhost:5173`) and the Angular frontend. The CAD worker will be initialized in the browser when needed.
+### For Existing OpenTSCAD Users
 
-### 2. Start the model client (Node.js watcher)
+Your existing projects continue to work without any changes! The new architecture maintains full backward compatibility.
 
-In another terminal, from the project root:
+## ✨ Features
 
-```bash
-# Using ts-node (or adjust to your setup)
-npx ts-node client.ts
+### 🏗️ Multi-Repository Architecture
+- **Distributed Development**: Work on separate model repositories
+- **Centralized Visualization**: Shared 3D rendering server
+- **Project Isolation**: Clean separation between different CAD projects
+- **Team Collaboration**: Multiple developers can connect simultaneously
+
+### 💻 Developer Experience
+- **TypeScript Native**: Full IntelliSense and type safety for 3D modeling
+- **Hot Module Replacement**: Live updates without recompilation delays
+- **CLI Tools**: Simple commands for project management and development
+- **Modern Frontend**: Angular-based interface with responsive design
+
+### ⚡ Performance
+- **Intelligent Caching**: Project-scoped compilation cache
+- **Incremental Updates**: Only recompile changed models
+- **Worker-Based Rendering**: Non-blocking 3D operations
+- **Memory Management**: Automatic cleanup and resource optimization
+
+### 🔧 Technical Capabilities
+- **OpenCascade Integration**: Professional-grade 3D geometry kernel
+- **Web-Based Visualization**: Three.js powered 3D rendering
+- **Real-Time Collaboration**: WebSocket-based communication
+- **Cross-Platform**: Works on Windows, macOS, and Linux
+
+## 📁 Project Structure
+
+```
+your-project/
+├── models/                     # Your TypeScript model files
+│   ├── components/
+│   │   ├── bolt.model.ts      # Individual components
+│   │   └── bracket.model.ts
+│   └── assemblies/
+│       └── main.model.ts      # Complex assemblies
+├── opentscad.config.json      # Project configuration
+├── package.json
+└── README.md
 ```
 
-Environment variables:
+## 🛠️ Development Workflow
 
-- `VITE_WS_URL` – WebSocket URL for the Vite dev server (default: `ws://localhost:5173`)
-- `MODEL_GLOB` – glob pattern for model files (default: `models/**/*.ts`)
+### 1. Initialize Project
+```bash
+npx @opentscad/cli init
+# Creates project structure and configuration
+```
 
-### 3. Edit models and see live updates
+### 2. Develop Models
+```typescript
+// models/bracket.model.ts
+import { box, cylinder, difference } from '@opentscad/core';
 
-1. Create or edit a model file, e.g. `models/example.ts`:
+export default function bracket() {
+  const base = box(50, 30, 10);
+  const hole = cylinder(5, 15).translate([25, 15, 0]);
+  
+  return difference(base, hole);
+}
+```
 
-   ```ts
-   import { box } from '@opentscad/core';
+### 3. Live Development
+```bash
+npm run dev
+# Starts development server with hot reloading
+# Opens http://localhost:5173 for 3D visualization
+```
 
-   export default () => box(40, 20, 10).translate(0, 0, 15);
-   ```
+### 4. Build for Production
+```bash
+npm run build
+# Compiles all models and generates optimized output
+```
 
-2. With both the dev server and client running:
-   - Saving the file triggers the Node client watcher
-   - The client sends a `MODEL_UPDATE` message with the new TypeScript source
-   - The Vite plugin transpiles and executes the model, runs the CAD pipeline, and broadcasts `MODEL_RESULT`
-   - The Angular frontend receives `MODEL_RESULT`, rebuilds the mesh, and updates the Three.js scene – no page reload required
+## 🌐 Multi-Project Setup
 
-## Logging
+### Server Setup (One Time)
+```bash
+# Clone and setup the main OpenTSCAD server
+git clone https://github.com/your-org/OpenTSCAD.git
+cd OpenTSCAD
+npm install
+npm run dev
+# Server runs on http://localhost:5173
+```
 
-The project uses a shared `Logger` (`core/shared/logger.ts`) across:
+### Connect Multiple Projects
+```bash
+# Project A
+cd project-a
+npx @opentscad/cli dev
 
-- **Model client (Node)** – connection lifecycle, file watch events, send errors
-- **Vite plugin (dev server)** – model transpilation, execution, triangulation, broadcast
-- **Core/worker APIs** – existing worker communication
+# Project B (in another terminal)
+cd project-b  
+npx @opentscad/cli dev
 
-Typical levels:
+# Both projects appear in the server's project manager UI
+```
 
-- `Logger.info` – high-level lifecycle events (connections, successful updates)
-- `Logger.debug` – detailed pipeline steps (transpilation, execution, triangulation)
-- `Logger.warn` – recoverable issues (WebSocket not open, closed connections)
-- `Logger.error` – failures (file I/O issues, transpile/execute errors, worker errors)
+## 📖 Documentation
+
+### Architecture & Design
+- [**Architecture Overview**](ARCHITECTURE.md) - System design and component interaction
+- [**TypeScript Style Guide**](TYPESCRIPT_STYLE_GUIDE.md) - Coding standards and best practices
+
+### Component Documentation
+- [**Core System**](core/README.md) - Server components and shared utilities
+- [**CLI Package**](packages/cli/README.md) - Command-line interface and client tools
+- [**Frontend Interface**](angular/README.md) - Web interface and visualization
+
+### Development Guides
+- [**Getting Started**](docs/getting-started.md) - Detailed setup and first model
+- [**Model Development**](docs/model-development.md) - Advanced modeling techniques
+- [**Project Configuration**](docs/configuration.md) - Customizing project settings
+- [**Deployment**](docs/deployment.md) - Production deployment strategies
+
+## 📄 License
+
+MIT License - see [LICENSE](LICENSE) file for details.
+
+## 🏆 Acknowledgments
+
+- [OpenCascade Technology](https://www.opencascade.com/) for the geometry kernel
+- [Three.js](https://threejs.org/) for 3D rendering capabilities
+- [Angular Team](https://angular.io/) for the frontend framework
+- [Vite](https://vitejs.dev/) for the lightning-fast development experience
+
+---
+
+**Ready to start creating amazing 3D models with TypeScript?** 
+
+[Get Started →](docs/getting-started.md) | [View Examples →](examples/) | [Join Community →](https://github.com/your-org/OpenTSCAD/discussions)
 
 This structured logging makes it easy to trace a single model update from file change, through the server, into the worker, and out to the browser.
 

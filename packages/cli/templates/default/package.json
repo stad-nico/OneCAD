@@ -1,0 +1,26 @@
+{
+  "name": "my-opentscad-project",
+  "version": "1.0.0",
+  "description": "OpenTSCAD 3D modeling project",
+  "type": "module",
+  "scripts": {
+    "dev": "opentscad dev",
+    "build": "opentscad build",
+    "clean": "rm -rf dist"
+  },
+  "keywords": [
+    "3d-modeling",
+    "cad",
+    "opentscad",
+    "typescript"
+  ],
+  "author": "Your Name",
+  "license": "MIT",
+  "dependencies": {
+    "@opentscad/core": "^0.1.0"
+  },
+  "devDependencies": {
+    "@opentscad/cli": "^0.1.0",
+    "typescript": "^5.4.0"
+  }
+}

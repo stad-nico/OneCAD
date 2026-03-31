@@ -1,0 +1,16 @@
+{
+  "name": "{{projectName}}",
+  "version": "1.0.0",
+  "description": "A basic OpenTSCAD project",
+  "main": "models/simple.ts",
+  "scripts": {
+    "dev": "opentscad dev",
+    "build": "opentscad build",
+    "serve": "opentscad serve"
+  },
+  "devDependencies": {
+    "@opentscad/cli": "latest",
+    "typescript": "^5.0.0"
+  },
+  "type": "module"
+}

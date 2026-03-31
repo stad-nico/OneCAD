@@ -1,0 +1,114 @@
+<div class="project-list">
+  <!-- Create Project Button -->
+  <div class="create-section">
+    @if (!isCreateFormOpen()) {
+      <button 
+        class="create-btn"
+        (click)="openCreateForm()"
+        [disabled]="isCreating()">
+        + New Project
+      </button>
+    }
+    
+    <!-- Create Project Form -->
+    @if (isCreateFormOpen()) {
+      <div class="create-form">
+        <div class="form-group">
+          <label for="project-name">Project Name</label>
+          <input
+            id="project-name"
+            type="text"
+            class="form-input"
+            placeholder="Enter project name"
+            [(ngModel)]="newProjectName"
+            [disabled]="isCreating()"
+            maxlength="50">
+        </div>
+        
+        <div class="form-group">
+          <label for="project-description">Description (Optional)</label>
+          <textarea
+            id="project-description"
+            class="form-textarea"
+            placeholder="Enter project description"
+            [(ngModel)]="newProjectDescription"
+            [disabled]="isCreating()"
+            maxlength="200"
+            rows="3">
+          </textarea>
+        </div>
+        
+        <div class="form-actions">
+          <button 
+            class="btn btn-primary"
+            (click)="createProject()"
+            [disabled]="!newProjectName().trim() || isCreating()">
+            {{ isCreating() ? 'Creating...' : 'Create' }}
+          </button>
+          <button 
+            class="btn btn-secondary"
+            (click)="cancelCreate()"
+            [disabled]="isCreating()">
+            Cancel
+          </button>
+        </div>
+      </div>
+    }
+  </div>
+  
+  <!-- Project List -->
+  <div class="projects-container">
+    @if (formattedProjects().length > 0) {
+      @for (project of formattedProjects(); track trackByProjectId($index, project)) {
+        <div 
+          class="project-item"
+          [class.selected]="project.id === selectedProjectId()"
+          (click)="selectProject(project.id)">
+          
+          <div class="project-header">
+            <div class="project-name">{{ project.name }}</div>
+            @if (project.id !== 'local') {
+              <div class="project-actions">
+                <button 
+                  class="delete-btn"
+                  (click)="deleteProject($event, project.id)"
+                  [attr.aria-label]="'Delete project ' + project.name"
+                  title="Delete Project">
+                  ×
+                </button>
+              </div>
+            }
+          </div>
+          
+          @if (project.description) {
+            <div class="project-info">
+              <p class="project-description">{{ project.shortDescription }}</p>
+            </div>
+          }
+          
+          <div class="project-meta">
+            <div class="meta-item">
+              <span class="meta-label">Models:</span>
+              <span class="meta-value">{{ project.modelCount }}</span>
+            </div>
+            <div class="meta-item">
+              <span class="meta-label">Updated:</span>
+              <span class="meta-value">{{ project.formattedUpdatedDate }}</span>
+            </div>
+          </div>
+          
+          @if (project.id === 'local') {
+            <div class="project-indicator">
+              <span class="local-badge">Default</span>
+            </div>
+          }
+        </div>
+      }
+    } @else {
+      <!-- Empty State -->
+      <div class="empty-projects">
+        <p>No projects available. Create your first project to get started.</p>
+      </div>
+    }
+  </div>
+</div>

@@ -1,1 +1,135 @@
-<canvas #canvas></canvas>
+<div class="model-visualizer">
+  <!-- Model Information Panel -->
+  @if (hasModel()) {
+    <div class="model-info-panel">
+      <h3>Model Information</h3>
+      @if (modelInfo(); as info) {
+        <div class="info-grid">
+          <div class="info-item">
+            <label>Name:</label>
+            <span>{{ info.name }}</span>
+          </div>
+          <div class="info-item">
+            <label>ID:</label>
+            <span>{{ info.id }}</span>
+          </div>
+          <div class="info-item">
+            <label>Operations:</label>
+            <span>{{ info.operationsCount }}</span>
+          </div>
+          <div class="info-item">
+            <label>Has Shape:</label>
+            <span>{{ info.hasShape ? 'Yes' : 'No' }}</span>
+          </div>
+        </div>
+      }
+    </div>
+  } @else {
+    <div class="no-model-panel">
+      <h3>No Model Loaded</h3>
+      <p>Save a model file to see it appear here.</p>
+    </div>
+  }
+  
+  <!-- 3D Canvas (currently not functional due to triangulation being disabled) -->
+  <div class="canvas-container">
+    <canvas #canvas></canvas>
+    @if (!hasModel()) {
+      <div class="canvas-overlay">
+        <div class="overlay-message">
+          <h4>3D Viewer</h4>
+          <p>Model will be rendered here once triangulation is enabled</p>
+        </div>
+      </div>
+    }
+  </div>
+</div>
+
+<style>
+.model-visualizer {
+  display: flex;
+  flex-direction: column;
+  height: 100%;
+  gap: 1rem;
+  padding: 1rem;
+}
+
+.model-info-panel {
+  background: #f5f5f5;
+  border: 1px solid #ddd;
+  border-radius: 8px;
+  padding: 1rem;
+  max-height: 200px;
+  overflow-y: auto;
+}
+
+.no-model-panel {
+  background: #fff;
+  border: 2px dashed #ccc;
+  border-radius: 8px;
+  padding: 2rem;
+  text-align: center;
+  color: #666;
+}
+
+.info-grid {
+  display: grid;
+  grid-template-columns: auto 1fr;
+  gap: 0.5rem 1rem;
+  margin-top: 1rem;
+}
+
+.info-item {
+  display: contents;
+}
+
+.info-item label {
+  font-weight: bold;
+  color: #333;
+}
+
+.info-item span {
+  color: #666;
+}
+
+.canvas-container {
+  flex: 1;
+  position: relative;
+  background: #000;
+  border-radius: 8px;
+  overflow: hidden;
+}
+
+canvas {
+  width: 100%;
+  height: 100%;
+  display: block;
+}
+
+.canvas-overlay {
+  position: absolute;
+  top: 0;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background: rgba(0, 0, 0, 0.8);
+  color: white;
+}
+
+.overlay-message {
+  text-align: center;
+}
+
+.overlay-message h4 {
+  margin: 0 0 0.5rem 0;
+  font-size: 1.2rem;
+}
+
+.overlay-message p {
+  margin: 0;
+  opacity: 0.8;
+}
+</style>

@@ -1,0 +1,19 @@
+{
+  "name": "mechanical-parts-example",
+  "version": "1.0.0",
+  "description": "OpenTSCAD example demonstrating functional mechanical components",
+  "main": "models/assembly.ts",
+  "scripts": {
+    "dev": "opentscad dev",
+    "build": "opentscad build",
+    "serve": "opentscad serve",
+    "clean": "rm -rf dist"
+  },
+  "devDependencies": {
+    "@opentscad/cli": "latest",
+    "typescript": "^5.0.0"
+  },
+  "keywords": ["opentscad", "3d-modeling", "mechanical", "engineering", "example"],
+  "license": "MIT",
+  "type": "module"
+}

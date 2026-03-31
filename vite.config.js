@@ -11,7 +11,7 @@ export default defineConfig({
 	],
 	resolve: {
 		alias: {
-			'@opentscad/core': '/core/index.ts',
+			'@opentscad/core': '/packages/core/src/index.ts',
 		},
 	},
 	assetsInclude: ['**/*.wasm'],

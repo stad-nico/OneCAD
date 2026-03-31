@@ -1,0 +1,9 @@
+{
+  "projectId": "{{PROJECT_ID}}",
+  "name": "{{PROJECT_NAME}}",
+  "description": "{{PROJECT_DESCRIPTION}}",
+  "serverUrl": "ws://localhost:5174",
+  "watchPatterns": ["**/*.model.ts"],
+  "outputDir": "./dist",
+  "version": "1.0.0"
+}

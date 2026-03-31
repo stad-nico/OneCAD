@@ -1,10 +1,10 @@
 import { Component } from '@angular/core';
-import { ModelVisualizerComponent } from './model-visualizer/model-visualizer.component';
+import { RouterOutlet } from '@angular/router';
 
 @Component({
   selector: 'app-root',
   templateUrl: './app.component.html',
-  imports: [ModelVisualizerComponent],
+  imports: [RouterOutlet],
   host: { class: 'block size-full' },
 })
 export class AppComponent {}
