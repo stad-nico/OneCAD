@@ -1,36 +1,55 @@
+import { Logger } from "@nestjs/common";
 import {
+  ConnectedSocket,
   MessageBody,
   SubscribeMessage,
   WebSocketGateway,
-  WebSocketServer,
 } from "@nestjs/websockets";
 import {
   ClientEvent,
+  type ClientEventPayload,
   FrontendEvent,
-  type ClientModelUpdatePayload,
-  type FrontendModelUpdatePayload,
+  FrontendEventPayload,
 } from "@opentscad/types";
-import { Server, Socket } from "socket.io";
+import { Socket } from "socket.io";
+import { ExposingIoAdapter } from "./exposing-io.adapter";
 
 @WebSocketGateway({ namespace: "/client", cors: true })
 export class ClientGateway {
-  @WebSocketServer()
-  private readonly server!: Server;
+  private readonly logger = new Logger(ClientGateway.name);
 
   @SubscribeMessage(ClientEvent.ModelUpdate)
-  handleModelUpdate(@MessageBody() payload: ClientModelUpdatePayload): void {
-    // For now, we just broadcast the model update to all frontend clients.
-    // Later we may be want to do some post processing or storing the model in a database.
-    this.server.of("/frontend").emit(FrontendEvent.ModelUpdate, {
-      model: payload.model,
-    } satisfies FrontendModelUpdatePayload);
+  handleModelUpdate(
+    @MessageBody() payload: ClientEventPayload<ClientEvent.ModelUpdate>,
+    @ConnectedSocket() client: Socket,
+  ): void {
+    const { id, name, steps } = payload.model;
+
+    this.logger.log(
+      `Received ${ClientEvent.ModelUpdate} from ${client.id} for model ${name} (${id})`,
+    );
+
+    const server = ExposingIoAdapter.getServer();
+
+    if (!server) {
+      this.logger.error("[Client] Socket.IO server not ready");
+      return;
+    }
+
+    server.of("/frontend").emit(FrontendEvent.ModelUpdate, {
+      model: { id, name, steps },
+    } satisfies FrontendEventPayload<FrontendEvent.ModelUpdate>);
+
+    this.logger.debug(
+      `Broadcasted ${FrontendEvent.ModelUpdate} from ${client.id} to frontend namespace`,
+    );
   }
 
   handleConnection(client: Socket): void {
-    console.log(`[Client] connected: ${client.id}`);
+    this.logger.log(`Client connected: ${client.id}`);
   }
 
   handleDisconnect(client: Socket): void {
-    console.log(`[Client] disconnected: ${client.id}`);
+    this.logger.log(`Client disconnected: ${client.id}`);
   }
 }

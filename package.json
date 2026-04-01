@@ -1,14 +1,14 @@
 {
   "name": "opentscad",
   "private": true,
-  "scripts": {
-    "build": "pnpm -r build",
-    "dev:backend": "pnpm --filter @opentscad/backend dev"
-  },
   "devDependencies": {
     "typescript": "^6.0.2"
   },
   "pnpm": {
-    "onlyBuiltDependencies": ["@nestjs/core", "esbuild"]
+    "onlyBuiltDependencies": [
+      "@nestjs/core",
+      "esbuild",
+      "unrs-resolver"
+    ]
   }
 }

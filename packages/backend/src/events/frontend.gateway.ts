@@ -1,32 +1,16 @@
-import {
-  ConnectedSocket,
-  MessageBody,
-  SubscribeMessage,
-  WebSocketGateway,
-} from "@nestjs/websockets";
-import {
-  FrontendEvent,
-  type FrontendModelUpdatePayload,
-} from "@opentscad/types";
+import { Logger } from "@nestjs/common";
+import { WebSocketGateway } from "@nestjs/websockets";
 import { Socket } from "socket.io";
 
 @WebSocketGateway({ namespace: "/frontend", cors: true })
 export class FrontendGateway {
-  @SubscribeMessage(FrontendEvent.ModelUpdate)
-  handleModelUpdate(
-    @MessageBody() payload: FrontendModelUpdatePayload,
-    @ConnectedSocket() client: Socket,
-  ): void {
-    console.log(
-      `[Frontend] model:update from ${client.id}: ${payload.model.name} (${payload.model.id})`,
-    );
-  }
+  private readonly logger = new Logger(FrontendGateway.name);
 
   handleConnection(client: Socket): void {
-    console.log(`[Frontend] connected: ${client.id}`);
+    this.logger.log(`[Frontend] connected: ${client.id}`);
   }
 
   handleDisconnect(client: Socket): void {
-    console.log(`[Frontend] disconnected: ${client.id}`);
+    this.logger.log(`[Frontend] disconnected: ${client.id}`);
   }
 }
