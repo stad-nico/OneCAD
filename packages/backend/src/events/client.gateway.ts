@@ -2,6 +2,8 @@ import { Logger } from "@nestjs/common";
 import {
   ConnectedSocket,
   MessageBody,
+  OnGatewayConnection,
+  OnGatewayDisconnect,
   SubscribeMessage,
   WebSocketGateway,
 } from "@nestjs/websockets";
@@ -9,14 +11,25 @@ import {
   ClientEvent,
   type ClientEventPayload,
   FrontendEvent,
-  FrontendEventPayload,
+  type FrontendEventMessage,
 } from "@opentscad/types";
 import { Socket } from "socket.io";
 import { ExposingIoAdapter } from "./exposing-io.adapter";
+import { FrontendGateway } from "./frontend.gateway";
 
 @WebSocketGateway({ namespace: "/client", cors: true })
-export class ClientGateway {
+export class ClientGateway implements OnGatewayConnection, OnGatewayDisconnect {
   private readonly logger = new Logger(ClientGateway.name);
+
+  constructor(private readonly frontendGateway: FrontendGateway) {}
+
+  handleConnection(client: Socket): void {
+    this.logger.log(`Client connected: ${client.id}`);
+  }
+
+  handleDisconnect(client: Socket): void {
+    this.logger.log(`Client disconnected: ${client.id}`);
+  }
 
   @SubscribeMessage(ClientEvent.ModelUpdate)
   handleModelUpdate(
@@ -37,19 +50,15 @@ export class ClientGateway {
     }
 
     server.of("/frontend").emit(FrontendEvent.ModelUpdate, {
+      event: FrontendEvent.ModelUpdate,
       model: { id, name, steps },
-    } satisfies FrontendEventPayload<FrontendEvent.ModelUpdate>);
+    } satisfies FrontendEventMessage);
+
+    // Cache the model directly in the frontend gateway
+    this.frontendGateway.cacheModel({ id, name, steps });
 
     this.logger.debug(
       `Broadcasted ${FrontendEvent.ModelUpdate} from ${client.id} to frontend namespace`,
     );
-  }
-
-  handleConnection(client: Socket): void {
-    this.logger.log(`Client connected: ${client.id}`);
-  }
-
-  handleDisconnect(client: Socket): void {
-    this.logger.log(`Client disconnected: ${client.id}`);
   }
 }

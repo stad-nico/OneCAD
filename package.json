@@ -7,8 +7,16 @@
   "pnpm": {
     "onlyBuiltDependencies": [
       "@nestjs/core",
+      "@parcel/watcher",
       "esbuild",
+      "lmdb",
+      "msgpackr-extract",
       "unrs-resolver"
     ]
+  },
+  "dependencies": {
+    "@types/socket.io-client": "^3.0.0",
+    "socket.io": "^4.8.3",
+    "socket.io-client": "4.7.0"
   }
 }

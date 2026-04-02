@@ -1,4 +1,4 @@
-import { ClientEvent, ClientEventPayload } from "@opentscad/types";
+import { ClientEvent, ClientEventPayload, Model } from "@opentscad/types";
 import * as path from "path";
 import { loadConfigOrThrow } from "./config";
 import { createModelWatcher } from "./watcher";
@@ -13,12 +13,25 @@ const config = await loadConfigOrThrow(resolvedConfigPath);
 console.log(`[client] server listening: ${config.serverUrl}`);
 console.log(`[client] watching: ${config.watch.join(", ")}`);
 
-const socket = createClient(config.serverUrl);
+const socket = createClient(config.serverUrl, () => {
+  console.log("[client] broadcasting cached models to new connection");
+  for (const model of WATCHED_MODELS) {
+    const { id, name, steps } = model;
+
+    socket.emit(ClientEvent.ModelUpdate, {
+      model: { id, name, steps },
+    } satisfies ClientEventPayload<ClientEvent.ModelUpdate>);
+  }
+});
+
+const WATCHED_MODELS = new Set<Model>();
 
 createModelWatcher(config.watch, configDir, (model) => {
   const { id, name, steps } = model;
 
   console.log(`[client] ${id} changed`);
+
+  WATCHED_MODELS.add(model);
 
   socket.emit(ClientEvent.ModelUpdate, {
     model: { id, name, steps },

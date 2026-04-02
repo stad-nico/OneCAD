@@ -27,5 +27,13 @@ interface FrontendEventPayloads {
 /**
  * Type helper to get the payload type for a given frontend event.
  */
-export type FrontendEventPayload<Event extends FrontendEvent> =
+type FrontendEventPayload<Event extends FrontendEvent> =
   FrontendEventPayloads[Event];
+
+/**
+ * Type representing a message sent to the frontend, containing the event type and its associated payload.
+ */
+export type FrontendEventMessage<Event extends FrontendEvent = FrontendEvent> =
+  {
+    event: Event;
+  } & FrontendEventPayload<Event>;
