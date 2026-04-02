@@ -14,7 +14,10 @@ console.log(`[client] server listening: ${config.serverUrl}`);
 console.log(`[client] watching: ${config.watch.join(", ")}`);
 
 const socket = createClient(config.serverUrl, () => {
-  console.log("[client] broadcasting cached models to new connection");
+  console.log(
+    `[client] broadcasting ${WATCHED_MODELS.size} cached models to new connection`,
+  );
+
   for (const model of WATCHED_MODELS) {
     const { id, name, steps } = model;
 
