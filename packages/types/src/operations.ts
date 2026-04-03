@@ -148,7 +148,7 @@ export function isStep(object: unknown): object is Step {
   const hasValidType =
     "type" in object &&
     typeof object.type === "string" &&
-    object.type in Operation;
+    Object.values(Operation).includes(object.type as Operation);
 
   const hasValidParams =
     "params" in object && typeof object.params === "object";

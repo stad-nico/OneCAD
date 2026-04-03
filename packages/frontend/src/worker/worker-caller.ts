@@ -49,6 +49,8 @@ const pendingRequests: {
  */
 const worker = await getOrInstantiateWorker();
 
+callWorker(WorkerMessageType.Initialize);
+
 /**
  *
  */

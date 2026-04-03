@@ -1,6 +1,4 @@
 import { Maybe } from '@opentscad/types';
-import { WorkerMessageType } from './types';
-import { callWorker } from './worker-caller';
 
 /**
  * The current web worker instance, undefined if the worker has not yet been instantiated.
@@ -26,7 +24,6 @@ export async function getOrInstantiateWorker(): Promise<Worker> {
     const worker = new Worker(new URL('./worker.ts?worker', import.meta.url), { type: 'module' });
 
     workerInstance = worker;
-    await callWorker(WorkerMessageType.Initialize);
 
     resolve(worker);
   });

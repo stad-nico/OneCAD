@@ -1,4 +1,4 @@
-import { Component, inject, resource, signal } from '@angular/core';
+import { Component, computed, inject, resource, signal } from '@angular/core';
 import { Maybe, Model } from '@opentscad/types';
 import { WorkerMessageType } from '../worker/types';
 import { callWorker } from '../worker/worker-caller';
@@ -32,5 +32,7 @@ export class App {
     },
   });
 
-  protected readonly meshes = this.meshesResource.hasValue() ? [this.meshesResource.value()] : [];
+  protected readonly meshes = computed(() =>
+    this.meshesResource.hasValue() ? [this.meshesResource.value()] : [],
+  );
 }

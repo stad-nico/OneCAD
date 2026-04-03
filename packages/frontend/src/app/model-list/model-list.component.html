@@ -1,3 +1,5 @@
 @for (model of models(); track model.id) {
-  <div>{{ model.name }}</div>
+  <div [class.bg-blue-500]="model === selectedModel()" (click)="selectedModel.set(model)">
+    {{ model.name }}
+  </div>
 }

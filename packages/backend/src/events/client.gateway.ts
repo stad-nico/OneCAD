@@ -51,10 +51,9 @@ export class ClientGateway implements OnGatewayConnection, OnGatewayDisconnect {
 
     server.of("/frontend").emit(FrontendEvent.ModelUpdate, {
       event: FrontendEvent.ModelUpdate,
-      model: { id, name, steps },
+      payload: { model: { id, name, steps } },
     } satisfies FrontendEventMessage);
 
-    // Cache the model directly in the frontend gateway
     this.frontendGateway.cacheModel({ id, name, steps });
 
     this.logger.debug(

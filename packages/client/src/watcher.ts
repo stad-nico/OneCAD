@@ -65,6 +65,7 @@ async function handleFileChange(
   const maybeModel = await defaultExport();
 
   if (!isModel(maybeModel)) {
+    console.log(maybeModel);
     console.error(`[watcher] file did not export a valid model: ${filePath}`);
     return;
   }

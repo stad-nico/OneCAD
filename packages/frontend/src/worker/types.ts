@@ -91,7 +91,7 @@ export type WorkerRequestMessage<Type extends WorkerMessageType = WorkerMessageT
   /**
    * The type of the message, determining the structure of the payload.
    */
-  type: WorkerMessageType;
+  type: Type;
 
   /**
    * The payload for the message, which depends on the type of message being sent.
