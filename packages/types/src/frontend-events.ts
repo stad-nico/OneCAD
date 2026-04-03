@@ -35,5 +35,13 @@ type FrontendEventPayload<Event extends FrontendEvent> =
  */
 export type FrontendEventMessage<Event extends FrontendEvent = FrontendEvent> =
   {
+    /**
+     * The type of event being emitted to the frontend, determining the structure of the payload.
+     */
     event: Event;
-  } & FrontendEventPayload<Event>;
+
+    /**
+     * The payload for the event, which depends on the type of event being emitted.
+     */
+    payload: FrontendEventPayload<Event>;
+  };

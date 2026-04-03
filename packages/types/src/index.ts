@@ -1,5 +1,6 @@
 export { ClientEvent, type ClientEventPayload } from "./client-events";
 export { FrontendEvent, type FrontendEventMessage } from "./frontend-events";
+export { Logger } from "./logger";
 export { type Maybe } from "./maybe";
 export { isModel, type Model } from "./model";
 export { Operation, type Step } from "./operations";
