@@ -32,7 +32,7 @@ export class ModelService {
   public readonly models = toSignal(
     this.socket$.pipe(
       filter((message) => message.event === FrontendEvent.ModelUpdate),
-      map(({ model }) => model),
+      map(({ payload }) => payload.model),
       scan(
         (acc, model) => (acc.some((m) => m.id === model.id) ? acc : [...acc, model]),
         [] as Array<Model>,
