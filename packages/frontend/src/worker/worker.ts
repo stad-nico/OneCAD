@@ -1,5 +1,6 @@
-import { Maybe } from '@opentscad/types';
+import { Logger, Maybe } from '@opentscad/types';
 import { OpenCascadeInstance } from 'opencascade.js';
+import { WorkerMessageType, WorkerRequestMessage } from './types';
 
 /**
  * The OpenCascade instance that will be used to execute the operations.
@@ -17,17 +18,23 @@ let initializationStarted = false;
  * The requests that are received before the OpenCascade instance is initialized.
  * These will be processed once the initialization is complete.
  */
-const QUEUED_REQUESTS: Array<WorkerRequest> = [];
+const QUEUED_REQUESTS: Array<WorkerRequestMessage> = [];
 
 /**
  * Handles incoming messages from the main thread.
  *
  * @param event the message event from the main thread, containing the request to be processed
  */
-self.onmessage = async (event: MessageEvent<WorkerRequest>) => {
+self.onmessage = async (event: MessageEvent<WorkerRequestMessage>) => {
   Logger.debug('[Worker] Received message', { event });
 
-  await handleRequest(event.data);
+  if (event.data.type === WorkerMessageType.Initialize) {
+    return await handleRequest(event.data);
+  }
+
+  if (!openCascadeInstance && !initializationStarted) {
+    return await initOpenCascade();
+  }
 };
 
 /**
@@ -40,38 +47,9 @@ self.onmessage = async (event: MessageEvent<WorkerRequest>) => {
  *
  * @param request the request from the main thread
  */
-export async function handleRequest(request: WorkerRequest): Promise<void> {
-  if (!openCascadeInstance) {
-    Logger.info('[Worker] OpenCascade instance not initialized yet, queuing request', {
-      request,
-    });
-
-    QUEUED_REQUESTS.push(request);
-
-    if (!initializationStarted) {
-      await initOpenCascade();
-    }
-
-    return;
-  }
-
+export async function handleRequest(request: WorkerRequestMessage): Promise<void> {
   switch (request.type) {
-    case WorkerRequestType.Build: {
-      if (!request.data) {
-        Logger.error('[Worker] Failed to execute build request: missing data');
-        return;
-      }
-
-      const [operations] = request.data;
-
-      const response = await build(openCascadeInstance, operations);
-
-      self.postMessage({
-        type: WorkerRequestType.Build,
-        status: WorkerResponseStatus.Success,
-        id: request.id,
-        response,
-      } satisfies WorkerResponse);
+    case WorkerMessageType.TriangulateMeshFromSteps: {
     }
   }
 }
@@ -81,19 +59,9 @@ export async function handleRequest(request: WorkerRequest): Promise<void> {
  * that were received before the initialization was complete.
  */
 async function initOpenCascade(): Promise<void> {
-  if (openCascadeInstance) {
-    Logger.debug('[Worker] OpenCascade instance already initialized, skipping initialization');
-    return;
-  }
-
   initializationStarted = true;
 
   Logger.info('[Worker] Initializing OpenCascade...');
-
-  if (openCascadeInstance) {
-    Logger.debug('[Worker] OpenCascade instance already initialized, returning existing instance');
-    return;
-  }
 
   try {
     // @ts-ignore
