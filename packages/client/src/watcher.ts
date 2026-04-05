@@ -1,4 +1,4 @@
-import { isModel, Model } from "@opentscad/types";
+import { isModel, Logger, Model } from "@opentscad/types";
 import { FSWatcher, watch } from "chokidar";
 import { resolve } from "path";
 
@@ -29,7 +29,7 @@ export function createModelWatcher(
 
   watcher.on("ready", () => {
     const watched = watcher.getWatched();
-    console.log(`[watcher] ready. Paths: ${JSON.stringify(watched, null, 2)}`);
+    Logger.log(`[watcher] ready. Paths: ${JSON.stringify(watched, null, 2)}`);
   });
 
   return watcher;
@@ -56,7 +56,7 @@ async function handleFileChange(
   const defaultExport = module.default?.default || module.default;
 
   if (!defaultExport || typeof defaultExport !== "function") {
-    console.error(
+    Logger.error(
       `[watcher] file did not export a valid default model: ${filePath}`,
     );
     return;
@@ -65,8 +65,8 @@ async function handleFileChange(
   const maybeModel = await defaultExport();
 
   if (!isModel(maybeModel)) {
-    console.log(maybeModel);
-    console.error(`[watcher] file did not export a valid model: ${filePath}`);
+    Logger.log(maybeModel);
+    Logger.error(`[watcher] file did not export a valid model: ${filePath}`);
     return;
   }
 

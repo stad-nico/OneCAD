@@ -1,10 +1,10 @@
-import { Maybe, Operation, Step } from '@opentscad/types';
+import { Logger, Maybe, Operation, Step } from '@opentscad/types';
 import type { OpenCascadeInstance, TopoDS_Shape } from 'opencascade.js';
 
 export function executeSteps(openCascade: OpenCascadeInstance, steps: Array<Step>): TopoDS_Shape {
   let shape: Maybe<TopoDS_Shape> = undefined;
 
-  console.log('Executing steps', { steps });
+  Logger.debug('Executing steps', { steps });
 
   for (const step of steps) {
     switch (step.type) {

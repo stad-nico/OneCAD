@@ -37,14 +37,12 @@ export class FrontendGateway
   ): void {
     const { model } = message.payload;
 
-    console.log(`Caching model update: ${model.name} (${model.id})`);
     this.cachedModels.push(model);
   }
 
   handleConnection(client: Socket): void {
     this.logger.log(`[Frontend] connected: ${client.id}`);
 
-    console.log(this.cachedModels);
     for (const model of this.cachedModels) {
       client.emit(FrontendEvent.ModelUpdate, {
         payload: { model },

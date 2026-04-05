@@ -1,3 +1,4 @@
+import { Logger } from "@opentscad/types";
 import { io, Socket } from "socket.io-client";
 
 /**
@@ -12,16 +13,16 @@ export function createClient(url: string, onConnection: () => void): Socket {
   const socket = io(`${fullUrl}/client`, { transports: ["websocket"] });
 
   socket.on("connect", () => {
-    console.log(`[ws] connected: ${socket.id}`);
+    Logger.log(`[ws] connected: ${socket.id}`);
     onConnection();
   });
 
   socket.on("disconnect", (reason) =>
-    console.log(`[ws] disconnected: ${reason}`),
+    Logger.log(`[ws] disconnected: ${reason}`),
   );
 
   socket.on("connect_error", (err) =>
-    console.error(`[ws] connection error: ${err.message}`),
+    Logger.error(`[ws] connection error: ${err.message}`),
   );
 
   return socket;

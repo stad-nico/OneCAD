@@ -1,6 +1,6 @@
 import { Injectable } from '@angular/core';
 import { toSignal } from '@angular/core/rxjs-interop';
-import { FrontendEvent, FrontendEventMessage, Model } from '@opentscad/types';
+import { FrontendEvent, FrontendEventMessage, Logger, Model } from '@opentscad/types';
 import { filter, map, Observable, scan } from 'rxjs';
 import { io, Socket } from 'socket.io-client';
 
@@ -19,7 +19,7 @@ export class ModelService {
    */
   private readonly socket$ = new Observable<FrontendEventMessage>((subscriber) => {
     this.socket.on('connect', () =>
-      console.log('Successfully connected to backend frontend socket'),
+      Logger.log('Successfully connected to backend frontend socket'),
     );
     this.socket.onAny((event: string, message: FrontendEventMessage) => subscriber.next(message));
     return () => this.socket.disconnect();
