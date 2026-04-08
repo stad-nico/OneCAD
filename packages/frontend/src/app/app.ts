@@ -1,4 +1,5 @@
-import { Component, computed, inject, resource, signal } from '@angular/core';
+import { Component, computed, inject, linkedSignal, resource } from '@angular/core';
+import { toSignal } from '@angular/core/rxjs-interop';
 import { Maybe, Model } from '@opentscad/types';
 import { WorkerMessageType } from '../worker/types';
 import { callWorker } from '../worker/worker-caller';
@@ -15,9 +16,13 @@ import { visualize } from './visualize';
 export class App {
   private readonly modelService = inject(ModelService);
 
+  private readonly changedModel = toSignal<Maybe<Model>>(this.modelService.modelChange$, {
+    initialValue: undefined,
+  });
+
   public readonly models = this.modelService.models;
 
-  public readonly selectedModel = signal<Maybe<Model>>(undefined);
+  public readonly selectedModel = linkedSignal(() => this.changedModel());
 
   private readonly meshesResource = resource({
     params: this.selectedModel,

@@ -37,7 +37,7 @@ export class FrontendGateway
   ): void {
     const { model } = message.payload;
 
-    this.cachedModels.push(model);
+    this.cacheModel(model);
   }
 
   handleConnection(client: Socket): void {

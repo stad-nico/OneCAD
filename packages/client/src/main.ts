@@ -22,24 +22,21 @@ const socket = createClient(config.serverUrl, () => {
   Logger.log(
     `[client] broadcasting ${WATCHED_MODELS.size} cached models to new connection`,
   );
-
-  for (const model of WATCHED_MODELS) {
+  for (const model of WATCHED_MODELS.values()) {
     const { id, name, steps } = model;
-
     socket.emit(ClientEvent.ModelUpdate, {
       model: { id, name, steps },
     } satisfies ClientEventPayload<ClientEvent.ModelUpdate>);
   }
 });
 
-const WATCHED_MODELS = new Set<Model>();
+const WATCHED_MODELS = new Map<string, Model>();
 
 createModelWatcher(config.watch, configDir, (model) => {
   const { id, name, steps } = model;
 
   Logger.log(`[client] ${id} changed`);
-
-  WATCHED_MODELS.add(model);
+  WATCHED_MODELS.set(id, model);
 
   socket.emit(ClientEvent.ModelUpdate, {
     model: { id, name, steps },

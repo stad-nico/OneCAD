@@ -25,6 +25,11 @@ export class ModelService {
     return () => this.socket.disconnect();
   });
 
+  public readonly modelChange$ = this.socket$.pipe(
+    filter((message) => message.event === FrontendEvent.ModelUpdate),
+    map(({ payload }) => payload.model),
+  );
+
   /**
    * A signal that holds the list of all models known to the frontend.
    * It updates whenever a new model update message is received from the backend.
@@ -34,7 +39,10 @@ export class ModelService {
       filter((message) => message.event === FrontendEvent.ModelUpdate),
       map(({ payload }) => payload.model),
       scan(
-        (acc, model) => (acc.some((m) => m.id === model.id) ? acc : [...acc, model]),
+        (acc, model) =>
+          acc.some((m) => m.id === model.id)
+            ? acc.map((m) => (m.id === model.id ? model : m))
+            : [...acc, model],
         [] as Array<Model>,
       ),
     ),
