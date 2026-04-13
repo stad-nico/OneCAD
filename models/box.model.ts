@@ -10,7 +10,7 @@ export default function createModel(): Model {
         type: Operation.Box,
         params: {
           width: 20,
-          height: 200,
+          height: 20,
           depth: 20,
         },
       },

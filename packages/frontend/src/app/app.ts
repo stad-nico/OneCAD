@@ -12,6 +12,9 @@ import { visualize } from './visualize';
   selector: 'app-root',
   imports: [ModelListComponent, ModelVisualizerComponent],
   templateUrl: './app.html',
+  host: {
+    class: 'flex size-full',
+  },
 })
 export class App {
   private readonly modelService = inject(ModelService);
@@ -24,7 +27,7 @@ export class App {
 
   public readonly selectedModel = linkedSignal(() => this.changedModel());
 
-  private readonly meshesResource = resource({
+  private readonly meshVisualizationsResource = resource({
     params: this.selectedModel,
     loader: async ({ params }) => {
       const { steps } = params;
@@ -37,7 +40,7 @@ export class App {
     },
   });
 
-  protected readonly meshes = computed(() =>
-    this.meshesResource.hasValue() ? [this.meshesResource.value()] : [],
+  protected readonly meshVisualizations = computed(() =>
+    this.meshVisualizationsResource.hasValue() ? [this.meshVisualizationsResource.value()] : [],
   );
 }

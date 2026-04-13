@@ -1,6 +1,8 @@
 import { isModel, Logger, Model } from "@opentscad/types";
 import { FSWatcher, watch } from "chokidar";
-import { resolve } from "path";
+import { readFile, unlink, writeFile } from "fs/promises";
+import { basename, resolve } from "path";
+import { pathToFileURL } from "url";
 
 /**
  * Creates a file watcher for the specified patterns and calls the provided callback on model file changes.
@@ -29,7 +31,7 @@ export function createModelWatcher(
 
   watcher.on("ready", () => {
     const watched = watcher.getWatched();
-    Logger.log(`[watcher] ready. Paths: ${JSON.stringify(watched, null, 2)}`);
+    Logger.debug(`[watcher] ready. Paths: ${JSON.stringify(watched, null, 2)}`);
   });
 
   return watcher;
@@ -50,25 +52,37 @@ async function handleFileChange(
     return;
   }
 
-  const fileUrl = `file://${resolve(filePath)}`;
+  const absolutePath = resolve(filePath);
 
-  const module = await import(fileUrl);
-  const defaultExport = module.default?.default || module.default;
+  // Copy the file to a temporary location before importing it to bypass module caching
+  const fileContent = await readFile(absolutePath);
+  const tempPath = absolutePath.replace(/\.ts$/, `_${Date.now()}.ts`);
+  await writeFile(tempPath, fileContent);
 
-  if (!defaultExport || typeof defaultExport !== "function") {
-    Logger.error(
-      `[watcher] file did not export a valid default model: ${filePath}`,
-    );
-    return;
+  try {
+    const module = await import(pathToFileURL(tempPath).href);
+    const defaultExport = module.default?.default || module.default;
+
+    if (!defaultExport || typeof defaultExport !== "function") {
+      Logger.error(
+        `[watcher] file did not export a valid default export: ${basename(filePath)}`,
+      );
+      return;
+    }
+
+    const maybeModel = await defaultExport();
+
+    if (!isModel(maybeModel)) {
+      Logger.error(
+        `[watcher] file did not export a valid model: ${basename(filePath)}`,
+      );
+      return;
+    }
+
+    callback(maybeModel);
+  } finally {
+    try {
+      await unlink(tempPath);
+    } catch (e) {}
   }
-
-  const maybeModel = await defaultExport();
-
-  if (!isModel(maybeModel)) {
-    Logger.log(maybeModel);
-    Logger.error(`[watcher] file did not export a valid model: ${filePath}`);
-    return;
-  }
-
-  callback(maybeModel);
 }

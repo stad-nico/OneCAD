@@ -1,5 +1,30 @@
 @for (model of models(); track model.id) {
-  <div [class.bg-blue-500]="model === selectedModel()" (click)="selectedModel.set(model)">
-    {{ model.name }}
+  @let isModelSelected = model === selectedModel();
+
+  <div
+    [class.bg-blue-600]="isModelSelected"
+    [class.hover:bg-blue-700]="isModelSelected"
+    [class.border-slate-500]="isModelSelected"
+    [class.bg-slate-800]="!isModelSelected"
+    [class.border-slate-700]="!isModelSelected"
+    [class.hover:bg-slate-700]="!isModelSelected"
+    [class.hover:border-slate-600]="!isModelSelected"
+    (click)="selectedModel.set(model)"
+    class="w-full px-4 py-3 rounded-lg transition-all duration-200 text-slate-100 border flex items-center justify-between"
+  >
+    <span class="truncate">{{ model.name }}</span>
+    <span
+      [class.bg-blue-500]="model === selectedModel()"
+      [class.bg-slate-700]="model !== selectedModel()"
+      class="ml-2 px-2 py-1 text-xs rounded font-semibold text-slate-100 whitespace-nowrap"
+    >
+      {{ model.id }}
+    </span>
+  </div>
+}
+
+@if (models().length === 0) {
+  <div class="text-center py-8 text-slate-400">
+    <p class="text-sm">No models loaded</p>
   </div>
 }

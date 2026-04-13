@@ -16,10 +16,10 @@ const configDir = path.dirname(resolvedConfigPath);
 const config = await loadConfigOrThrow(resolvedConfigPath);
 
 Logger.log(`[client] server listening: ${config.serverUrl}`);
-Logger.log(`[client] watching: ${config.watch.join(", ")}`);
+Logger.debug(`[client] watching: ${config.watch.join(", ")}`);
 
 const socket = createClient(config.serverUrl, () => {
-  Logger.log(
+  Logger.debug(
     `[client] broadcasting ${WATCHED_MODELS.size} cached models to new connection`,
   );
   for (const model of WATCHED_MODELS.values()) {
@@ -36,6 +36,7 @@ createModelWatcher(config.watch, configDir, (model) => {
   const { id, name, steps } = model;
 
   Logger.log(`[client] ${id} changed`);
+
   WATCHED_MODELS.set(id, model);
 
   socket.emit(ClientEvent.ModelUpdate, {

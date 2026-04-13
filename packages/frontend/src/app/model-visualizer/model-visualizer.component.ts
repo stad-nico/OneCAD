@@ -1,25 +1,49 @@
-import { Component, computed, effect, ElementRef, input, viewChild } from '@angular/core';
-import { Mesh } from 'three';
+import {
+  ChangeDetectionStrategy,
+  Component,
+  computed,
+  effect,
+  ElementRef,
+  input,
+  viewChild,
+} from '@angular/core';
+import { MeshVisualization } from '../visualize';
+import { RenderModeToggleComponent } from './components/render-mode-toggle/render-mode-toggle.component';
 import { Renderer } from './renderer';
 
 @Component({
   selector: 'app-model-visualizer',
+  standalone: true,
+  imports: [RenderModeToggleComponent],
   templateUrl: './model-visualizer.component.html',
-  host: { class: 'block' },
+  host: {
+    class: 'block w-full h-full relative',
+  },
+  changeDetection: ChangeDetectionStrategy.OnPush,
 })
 export class ModelVisualizerComponent {
-  public readonly meshes = input.required<Array<Mesh>>();
+  /**
+   * The list of mesh visualizations to render.
+   */
+  public readonly meshVisualizations = input.required<Array<MeshVisualization>>();
 
+  /**
+   * The canvas element reference used for rendering the 3D scene.
+   * This will be passed to the renderer for drawing the visualizations.
+   */
   protected readonly canvas = viewChild.required<ElementRef<HTMLCanvasElement>>('canvas');
 
-  readonly #renderer = computed(() => new Renderer(this.canvas().nativeElement));
+  /**
+   * The threejs renderer instance responsible for rendering the 3D scene on the canvas.
+   */
+  protected readonly renderer = computed(() => new Renderer(this.canvas().nativeElement));
 
   constructor() {
     effect(() => {
-      this.#renderer().clear();
+      this.renderer().clear();
 
-      for (const mesh of this.meshes()) {
-        this.#renderer().addMesh(mesh);
+      for (const visualization of this.meshVisualizations()) {
+        this.renderer().addVisualization(visualization);
       }
     });
   }

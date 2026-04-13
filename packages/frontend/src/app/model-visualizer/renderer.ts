@@ -1,142 +1,253 @@
-// ! TODO: refactor this
-import * as THREE from 'three';
+import {
+  AmbientLight,
+  Color,
+  DirectionalLight,
+  GridHelper,
+  Group,
+  MOUSE,
+  Mesh,
+  Object3D,
+  PerspectiveCamera,
+  Scene,
+  WebGLRenderer,
+} from 'three';
 import { OrbitControls } from 'three/examples/jsm/controls/OrbitControls.js';
+import { MeshVisualization } from '../visualize';
+
+export enum RenderMode {
+  Solid = 'solid',
+  Transparent = 'transparent',
+  Lines = 'lines',
+}
+
+interface RendererDimensions {
+  width: number;
+  height: number;
+}
 
 export class Renderer {
-  scene = new THREE.Scene();
-  camera: THREE.PerspectiveCamera;
-  renderer: THREE.WebGLRenderer;
+  scene: Scene;
+  camera: PerspectiveCamera;
+  renderer: WebGLRenderer;
   private controls: OrbitControls;
+  private ctrlKeyDown = { value: false };
+  private renderMode: RenderMode = RenderMode.Solid;
+  private visualizations: MeshVisualization[] = [];
 
   constructor(canvas: HTMLCanvasElement) {
-    this.scene.background = new THREE.Color(0x000000); // Black background
+    this.scene = new Scene();
+    const dimensions = this.getCanvasDimensions(canvas);
 
-    this.camera = new THREE.PerspectiveCamera(
-      75,
-      window.innerWidth / window.innerHeight,
-      0.1,
-      1000,
-    );
+    this.renderer = this.initializeRenderer(canvas, dimensions);
+    this.camera = this.initializeCamera(dimensions);
+    this.setupCoordinateSystem();
+    this.setupLighting();
+    this.setupGrid();
+    this.controls = this.setupControls();
+    this.setupKeyboardHandling();
+    this.animate();
+  }
 
-    this.renderer = new THREE.WebGLRenderer({ canvas, antialias: true });
-    this.renderer.setSize(window.innerWidth, window.innerHeight);
+  private getCanvasDimensions(canvas: HTMLCanvasElement): RendererDimensions {
+    const rect = canvas.parentElement?.getBoundingClientRect();
+    return {
+      width: rect?.width || window.innerWidth,
+      height: rect?.height || window.innerHeight,
+    };
+  }
 
-    // Initial camera position
-    this.camera.position.set(50, 50, 50);
-    this.camera.lookAt(0, 0, 0);
+  private initializeRenderer(
+    canvas: HTMLCanvasElement,
+    dimensions: RendererDimensions,
+  ): WebGLRenderer {
+    const glRenderer = new WebGLRenderer({ canvas, antialias: true });
+    glRenderer.setSize(dimensions.width, dimensions.height);
+    glRenderer.setPixelRatio(window.devicePixelRatio);
+    return glRenderer;
+  }
 
-    // Actually, typical CAD is Z-up. Let's make the scene Z-up.
-    THREE.Object3D.DEFAULT_UP.set(0, 0, 1);
+  private initializeCamera(dimensions: RendererDimensions): PerspectiveCamera {
+    const cam = new PerspectiveCamera(75, dimensions.width / dimensions.height, 0.1, 1000);
+    cam.position.set(50, 50, 50);
+    cam.lookAt(0, 0, 0);
+    return cam;
+  }
+
+  private setupCoordinateSystem(): void {
+    // CAD typically uses Z-up coordinate system
+    Object3D.DEFAULT_UP.set(0, 0, 1);
     this.camera.up.set(0, 0, 1);
+  }
 
-    // Add grid helper (XY plane / Ground)
-    const size = 200;
-    const divisions = 20;
-    const zUpGridHelper = new THREE.GridHelper(size, divisions, 0xffffff, 0xffffff);
-    zUpGridHelper.rotation.x = Math.PI / 2; // Grid is primarily in XZ, rotate to XY
-    this.scene.add(zUpGridHelper);
-
-    // Add lights
-    const ambientLight = new THREE.AmbientLight(0x404040, 2.0); // Soft white light
+  private setupLighting(): void {
+    // Blender-style lighting setup for better edge visibility
+    // Strong ambient light with blue-ish tone (like Blender's world lighting)
+    const ambientLight = new AmbientLight(0xb8d4ff, 0.8);
     this.scene.add(ambientLight);
 
-    const light1 = new THREE.DirectionalLight(0xffffff, 1.5);
-    light1.position.set(100, 100, 100);
-    this.scene.add(light1);
+    // Key light (main light) - warm, positioned above and to the side
+    const keyLight = new DirectionalLight(0xffffff, 1.4);
+    keyLight.position.set(60, 70, 120);
+    this.scene.add(keyLight);
 
-    const light2 = new THREE.DirectionalLight(0xffffff, 1);
-    light2.position.set(-100, -100, 100);
-    this.scene.add(light2);
+    // Rim light (fill light) - cool, from opposite side to create separation
+    const rimLight = new DirectionalLight(0x7fa5d4, 1.0);
+    rimLight.position.set(-80, -50, 60);
+    this.scene.add(rimLight);
 
-    // Handle window resize
-    window.addEventListener('resize', this.onWindowResize.bind(this), false);
+    // Back light - subtle, warm accent from below
+    const backLight = new DirectionalLight(0xffe8d0, 0.6);
+    backLight.position.set(0, -100, 40);
+    this.scene.add(backLight);
+  }
 
-    // Create controls (must be after camera and renderer are created)
-    this.controls = new OrbitControls(this.camera, this.renderer.domElement);
-    this.controls.enableDamping = false; // disable damping so motion stops immediately
+  private setupGrid(): void {
+    const size = 200;
+    const divisions = 20;
+    // Create a subtle, neutral grid that doesn't compete with the model
+    const gridHelper = new GridHelper(size, divisions, 0x6b7280, 0x4b5563);
+    gridHelper.rotation.x = Math.PI / 2; // Rotate to XY plane
+    gridHelper.position.z = -0.5;
+    this.scene.add(gridHelper);
+    // Use a sophisticated dark background with a subtle gradient effect
+    this.scene.background = new Color(0x0f1419);
+  }
 
-    // Zoom
-    this.controls.enableZoom = true;
+  private setupControls(): OrbitControls {
+    const orbitControls = new OrbitControls(this.camera, this.renderer.domElement);
+    orbitControls.enableDamping = false;
+    orbitControls.enableZoom = true;
+    orbitControls.enablePan = true;
+    orbitControls.listenToKeyEvents(window);
 
-    // Pan only when Ctrl is pressed
-    this.controls.mouseButtons = {
-      LEFT: THREE.MOUSE.ROTATE,
-      MIDDLE: THREE.MOUSE.DOLLY,
-      RIGHT: THREE.MOUSE.ROTATE,
+    // Configure mouse buttons
+    orbitControls.mouseButtons = {
+      LEFT: MOUSE.ROTATE,
+      MIDDLE: MOUSE.DOLLY,
+      RIGHT: MOUSE.ROTATE,
     };
-    this.controls.enablePan = true;
 
-    // Custom pan condition: only when Ctrl is held
-    this.controls.listenToKeyEvents(window);
+    this.overrideMouseBehavior(orbitControls);
+    return orbitControls;
+  }
 
-    const ctrlKeyDown = { value: false };
+  private setupKeyboardHandling(): void {
     window.addEventListener('keydown', (e) => {
-      if (e.key === 'Control') ctrlKeyDown.value = true;
+      if (e.key === 'Control') this.ctrlKeyDown.value = true;
     });
     window.addEventListener('keyup', (e) => {
-      if (e.key === 'Control') ctrlKeyDown.value = false;
+      if (e.key === 'Control') this.ctrlKeyDown.value = false;
     });
+  }
 
-    // Override the internal mouse move handling for panning conditionally
-    const originalHandleMouseMoveRotate = (this.controls as any).handleMouseMoveRotate?.bind(
-      this.controls,
-    );
-    const originalHandleMouseMovePan = (this.controls as any).handleMouseMovePan?.bind(
-      this.controls,
-    );
+  private overrideMouseBehavior(controls: OrbitControls): void {
+    // Override the internal mouse move handling to conditionally pan when Ctrl is held
+    const originalHandleMouseMoveRotate = (controls as any).handleMouseMoveRotate?.bind(controls);
+    const originalHandleMouseMovePan = (controls as any).handleMouseMovePan?.bind(controls);
 
     if (originalHandleMouseMoveRotate && originalHandleMouseMovePan) {
-      (this.controls as any).handleMouseMoveRotate = function (event: MouseEvent) {
-        if (ctrlKeyDown.value) {
+      (controls as any).handleMouseMoveRotate = (event: MouseEvent) => {
+        if (this.ctrlKeyDown.value) {
           originalHandleMouseMovePan(event);
         } else {
           originalHandleMouseMoveRotate(event);
         }
       };
     }
-
-    // Start render loop
-    this.animate();
   }
 
-  private onWindowResize() {
-    this.camera.aspect = window.innerWidth / window.innerHeight;
-    this.camera.updateProjectionMatrix();
-    this.renderer.setSize(window.innerWidth, window.innerHeight);
-  }
-
-  animate = () => {
+  animate = (): void => {
     requestAnimationFrame(this.animate);
     this.controls.update();
     this.renderer.render(this.scene, this.camera);
   };
 
-  render() {
+  render(): void {
     // Left empty or keep for forced updates, but animate loop handles it now
   }
 
-  clear() {
-    // Recreate scene and keep lights and grid
-    const childrenToRemove = this.scene.children.filter(
-      (child) => child instanceof THREE.Mesh && !(child instanceof THREE.GridHelper),
-    );
-
-    childrenToRemove.forEach((child) => {
-      this.scene.remove(child);
-      if (child instanceof THREE.Mesh) {
-        if (child.geometry) child.geometry.dispose();
-        if (child.material) {
-          if (Array.isArray(child.material)) {
-            child.material.forEach((m) => m.dispose());
-          } else {
-            child.material.dispose();
-          }
-        }
-      }
-    });
+  setRenderMode(mode: RenderMode): void {
+    this.renderMode = mode;
+    this.updateMeshesForMode();
   }
 
-  addMesh(mesh: THREE.Mesh) {
-    this.scene.add(mesh);
+  private updateMeshesForMode(): void {
+    for (const visualization of this.visualizations) {
+      const { mesh, wireframe } = visualization;
+
+      switch (this.renderMode) {
+        case RenderMode.Solid:
+          mesh.visible = true;
+          mesh.material = this.getSolidMaterial(mesh);
+          wireframe.visible = false;
+          break;
+        case RenderMode.Transparent:
+          mesh.visible = true;
+          mesh.material = this.getTransparentMaterial(mesh);
+          wireframe.visible = true;
+          break;
+        case RenderMode.Lines:
+          mesh.visible = false;
+          wireframe.visible = true;
+          break;
+      }
+    }
+  }
+
+  private getSolidMaterial(mesh: Mesh) {
+    const material = Array.isArray(mesh.material) ? mesh.material[0] : mesh.material;
+    if (material instanceof Mesh) return material.material;
+    material.transparent = false;
+    material.opacity = 1;
+    return material;
+  }
+
+  private getTransparentMaterial(mesh: Mesh) {
+    const material = Array.isArray(mesh.material) ? mesh.material[0] : mesh.material;
+    if (material instanceof Mesh) return material.material;
+    material.transparent = true;
+    material.opacity = 0.3;
+    return material;
+  }
+
+  clear(): void {
+    // Remove all meshes from the scene except the grid
+    const childrenToRemove = this.scene.children.filter(
+      (child): child is Mesh | Group =>
+        (child instanceof Mesh || child instanceof Group) && !(child instanceof GridHelper),
+    );
+
+    childrenToRemove.forEach((mesh) => {
+      this.scene.remove(mesh);
+      if (mesh instanceof Mesh && mesh.geometry) mesh.geometry.dispose();
+      if (mesh instanceof Mesh && mesh.material) {
+        if (Array.isArray(mesh.material)) {
+          mesh.material.forEach((material) => material.dispose());
+        } else {
+          mesh.material.dispose();
+        }
+      }
+      if (mesh instanceof Group) {
+        mesh.children.forEach((child) => {
+          if (child instanceof Mesh && child.geometry) child.geometry.dispose();
+          if (child instanceof Mesh && child.material) {
+            if (Array.isArray(child.material)) {
+              child.material.forEach((material) => material.dispose());
+            } else {
+              child.material.dispose();
+            }
+          }
+        });
+      }
+    });
+
+    this.visualizations = [];
+  }
+
+  addVisualization(visualization: MeshVisualization): void {
+    this.scene.add(visualization.mesh);
+    this.scene.add(visualization.wireframe);
+    this.visualizations.push(visualization);
+    this.updateMeshesForMode();
   }
 }

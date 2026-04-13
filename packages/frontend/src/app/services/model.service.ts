@@ -18,13 +18,15 @@ export class ModelService {
    * We use this as the source for all our signals that need to react to backend events.
    */
   private readonly socket$ = new Observable<FrontendEventMessage>((subscriber) => {
-    this.socket.on('connect', () =>
-      Logger.log('Successfully connected to backend frontend socket'),
-    );
+    this.socket.on('connect', () => Logger.log('Successfully connected to backend socket'));
     this.socket.onAny((event: string, message: FrontendEventMessage) => subscriber.next(message));
     return () => this.socket.disconnect();
   });
 
+  /**
+   * Observable that emits the changed model when a
+   * {@link FrontendEvent.ModelUpdate} message was recevied
+   */
   public readonly modelChange$ = this.socket$.pipe(
     filter((message) => message.event === FrontendEvent.ModelUpdate),
     map(({ payload }) => payload.model),

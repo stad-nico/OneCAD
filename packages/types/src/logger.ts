@@ -11,7 +11,7 @@ export class Logger {
     cssBg: string,
     cssFg: string,
     args: Array<unknown>,
-  ): [any, ...any[]] {
+  ): Array<unknown> {
     if (this.isBrowser) {
       return [
         `%c ${level} %c %c`,

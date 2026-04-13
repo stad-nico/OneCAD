@@ -1,9 +1,7 @@
 import { Logger } from "@nestjs/common";
 import {
-  MessageBody,
   OnGatewayConnection,
   OnGatewayDisconnect,
-  SubscribeMessage,
   WebSocketGateway,
 } from "@nestjs/websockets";
 import {
@@ -19,31 +17,22 @@ export class FrontendGateway
 {
   private readonly logger = new Logger(FrontendGateway.name);
 
-  private readonly cachedModels: Array<Model> = [];
+  /**
+   * A cache of all models that have been recevied by any client so far.
+   * This is needed to broadcast the current state of all models to new frontend
+   * clients that connect in case they connect after the model event was recevied.
+   */
+  private readonly cachedModels: Map<string, Model> = new Map();
 
   public cacheModel(model: Model): void {
-    const existingIndex = this.cachedModels.findIndex((m) => m.id === model.id);
-    if (existingIndex >= 0) {
-      this.cachedModels[existingIndex] = model;
-    } else {
-      this.cachedModels.push(model);
-    }
+    this.cachedModels.set(model.id, model);
     this.logger.log(`Cached model: ${model.name} (${model.id})`);
   }
 
-  @SubscribeMessage(FrontendEvent.ModelUpdate)
-  handleModelUpdate(
-    @MessageBody() message: FrontendEventMessage<FrontendEvent.ModelUpdate>,
-  ): void {
-    const { model } = message.payload;
-
-    this.cacheModel(model);
-  }
-
-  handleConnection(client: Socket): void {
+  public handleConnection(client: Socket): void {
     this.logger.log(`[Frontend] connected: ${client.id}`);
 
-    for (const model of this.cachedModels) {
+    for (const model of this.cachedModels.values()) {
       client.emit(FrontendEvent.ModelUpdate, {
         payload: { model },
         event: FrontendEvent.ModelUpdate,
@@ -51,7 +40,7 @@ export class FrontendGateway
     }
   }
 
-  handleDisconnect(client: Socket): void {
+  public handleDisconnect(client: Socket): void {
     this.logger.log(`[Frontend] disconnected: ${client.id}`);
   }
 }
