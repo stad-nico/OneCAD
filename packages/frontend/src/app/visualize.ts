@@ -45,6 +45,16 @@ const LINES_MATERIAL = new LineBasicMaterial({
 });
 
 /**
+ * The material used for the wireframe edges when in lines-only mode
+ */
+export const LINES_ONLY_MATERIAL = new LineBasicMaterial({
+  color: 0xffffff,
+  linewidth: 2,
+  transparent: false,
+  opacity: 1.0,
+});
+
+/**
  * Visualizes a triangulated mesh by creating a threejs mesh and its wireframe.
  *
  * @param payload the triangulated mesh data from the worker.

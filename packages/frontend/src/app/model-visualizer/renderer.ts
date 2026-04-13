@@ -12,7 +12,7 @@ import {
   WebGLRenderer,
 } from 'three';
 import { OrbitControls } from 'three/examples/jsm/controls/OrbitControls.js';
-import { MeshVisualization } from '../visualize';
+import { LINES_ONLY_MATERIAL, MeshVisualization } from '../visualize';
 
 export enum RenderMode {
   Solid = 'solid',
@@ -185,13 +185,21 @@ export class Renderer {
           mesh.visible = true;
           mesh.material = this.getTransparentMaterial(mesh);
           wireframe.visible = true;
+          wireframe.material = this.getWireframeMaterialForMode(false);
           break;
         case RenderMode.Lines:
           mesh.visible = false;
           wireframe.visible = true;
+          wireframe.material = this.getWireframeMaterialForMode(true);
           break;
       }
     }
+  }
+
+  private getWireframeMaterialForMode(isLinesOnly: boolean) {
+    return isLinesOnly
+      ? LINES_ONLY_MATERIAL
+      : this.visualizations[0]?.wireframe.material || LINES_ONLY_MATERIAL;
   }
 
   private getSolidMaterial(mesh: Mesh) {
