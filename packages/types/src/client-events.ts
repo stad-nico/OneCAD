@@ -1,27 +1,27 @@
-import { Model } from "./model";
+import { AstAssemblyNode } from "@opentscad/types";
 
 /**
  * Event emitted by the client to the server, meaning the place where the model files live.
  */
 export enum ClientEvent {
-  ModelUpdate = "model:update",
+  AssemblyUpdate = "assembly:update",
 }
 
 /**
- * Payload for the {@link ClientEvent.ModelUpdate} event.
+ * Payload for the {@link ClientEvent.AssemblyUpdate} event.
  */
-export interface ClientModelUpdatePayload {
+export interface ClientAssemblyUpdatePayload {
   /**
-   * The full model data, including its ID, name, and the sequence of steps to construct it.
+   * The full assembly data.
    */
-  model: Model;
+  assembly: AstAssemblyNode;
 }
 
 /**
  * Mapping of client events to their payload types.
  */
 interface ClientEventPayloads {
-  [ClientEvent.ModelUpdate]: ClientModelUpdatePayload;
+  [ClientEvent.AssemblyUpdate]: ClientAssemblyUpdatePayload;
 }
 
 /**

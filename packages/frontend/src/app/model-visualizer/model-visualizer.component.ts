@@ -7,7 +7,7 @@ import {
   input,
   viewChild,
 } from '@angular/core';
-import { MeshVisualization } from '../visualize';
+import { AssemblyVisualization } from '../shared/types/assembly-tree';
 import { RenderModeToggleComponent } from './components/render-mode-toggle/render-mode-toggle.component';
 import { Renderer } from './renderer';
 
@@ -25,7 +25,7 @@ export class ModelVisualizerComponent {
   /**
    * The list of mesh visualizations to render.
    */
-  public readonly meshVisualizations = input.required<Array<MeshVisualization>>();
+  public readonly visualizations = input.required<Array<AssemblyVisualization>>();
 
   /**
    * The canvas element reference used for rendering the 3D scene.
@@ -42,7 +42,7 @@ export class ModelVisualizerComponent {
     effect(() => {
       this.renderer().clear();
 
-      for (const visualization of this.meshVisualizations()) {
+      for (const visualization of this.visualizations()) {
         this.renderer().addVisualization(visualization);
       }
     });

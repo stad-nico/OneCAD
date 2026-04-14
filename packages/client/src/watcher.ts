@@ -1,4 +1,4 @@
-import { isModel, Logger, Model } from "@opentscad/types";
+import { Assembly, AstAssemblyNode, Logger } from "@opentscad/types";
 import { FSWatcher, watch } from "chokidar";
 import { readFile, unlink, writeFile } from "fs/promises";
 import { basename, resolve } from "path";
@@ -15,7 +15,7 @@ import { pathToFileURL } from "url";
 export function createModelWatcher(
   patterns: Array<string>,
   cwd: string,
-  onModelChange: (model: Model) => void,
+  onModelChange: (model: AstAssemblyNode) => void,
 ): FSWatcher {
   const resolved = patterns.map((p) => resolve(cwd, p));
 
@@ -46,7 +46,7 @@ export function createModelWatcher(
  */
 async function handleFileChange(
   filePath: string,
-  callback: (model: Model) => void,
+  callback: (model: AstAssemblyNode) => void,
 ): Promise<void> {
   if (!filePath.endsWith(".ts")) {
     return;
@@ -70,16 +70,20 @@ async function handleFileChange(
       return;
     }
 
-    const maybeModel = await defaultExport();
+    const maybeModel = (await defaultExport()) as Assembly;
+    console.log("got model", maybeModel);
 
-    if (!isModel(maybeModel)) {
-      Logger.error(
-        `[watcher] file did not export a valid model: ${basename(filePath)}`,
-      );
-      return;
-    }
+    // if (!isModel(maybeModel)) {
+    // ! TOOD: just warn for now, validate later
+    // Logger.error(
+    // `[watcher] file did not export a valid model: ${basename(filePath)}`,
+    // );
+    // return;
+    // }
 
-    callback(maybeModel);
+    const ast = maybeModel.toAstNode();
+
+    callback(ast);
   } finally {
     try {
       await unlink(tempPath);

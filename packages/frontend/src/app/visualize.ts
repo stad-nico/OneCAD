@@ -2,26 +2,28 @@ import {
   BufferAttribute,
   BufferGeometry,
   EdgesGeometry,
+  Group,
   LineBasicMaterial,
   LineSegments,
   Mesh,
   MeshStandardMaterial,
 } from 'three';
-import { WorkerMessageType, WorkerResponsePayload } from '../worker/types';
+import { TriangulationResult } from '../worker/triangulate';
+import { AssemblyVisualization } from './shared/types/assembly-tree';
 
 /**
  * Represents the visual components of a triangulated mesh, including the solid mesh and its wireframe edges.
  */
 export interface MeshVisualization {
   /**
-   * The threejs mesh with
+   * The threejs mesh or group containing meshes
    */
-  mesh: Mesh;
+  mesh: Group;
 
   /**
    * The wireframe edges of the mesh
    */
-  wireframe: LineSegments;
+  wireframe: LineSegments | Group;
 }
 
 /**
@@ -55,31 +57,40 @@ export const LINES_ONLY_MATERIAL = new LineBasicMaterial({
 });
 
 /**
- * Visualizes a triangulated mesh by creating a threejs mesh and its wireframe.
+ * Visualizes a MeshNode tree by creating threejs meshes and wireframes.
+ * Recursively processes the tree to handle assemblies with multiple parts.
  *
- * @param payload the triangulated mesh data from the worker.
- * @returns the visual representation of the mesh.
+ * @param meshNode the mesh node tree from the worker.
+ * @returns the visual representation of the mesh(es).
  */
-export function visualize(
-  payload: WorkerResponsePayload<WorkerMessageType.TriangulateMeshFromSteps>,
-): MeshVisualization {
-  const { vertices, normals, indices } = payload.triangulation;
+export function visualize(triangulation: TriangulationResult): AssemblyVisualization {
+  const { vertices, normals, indices } = triangulation;
 
-  const geometry = new BufferGeometry();
-
-  geometry.setAttribute('position', new BufferAttribute(vertices, 3));
-
-  if (normals.length === vertices.length) {
-    geometry.setAttribute('normal', new BufferAttribute(normals, 3));
-  } else {
-    geometry.computeVertexNormals();
+  if (!vertices) {
+    console.error('[visualizeSingleMesh] Mesh has no vertices', { triangulation });
+    throw new Error('Mesh has no vertices');
   }
 
-  geometry.setIndex(new BufferAttribute(indices, 1));
+  // Create geometry
+  const geometry = new BufferGeometry();
+  geometry.setAttribute('position', new BufferAttribute(vertices, 3));
+  if (normals && normals.length > 0) {
+    geometry.setAttribute('normal', new BufferAttribute(normals, 3));
+  } else {
+    // If no normals, compute them
+    geometry.computeVertexNormals();
+  }
+  if (indices && indices.length > 0) {
+    geometry.setIndex(new BufferAttribute(indices, 1));
+  }
 
-  const mesh = new Mesh(geometry, MESH_MATERIAL);
+  // Always compute vertex normals to be safe
+  geometry.computeVertexNormals();
 
-  const wireframe = new LineSegments(new EdgesGeometry(geometry), LINES_MATERIAL);
+  const mesh = new Mesh(geometry, MESH_MATERIAL.clone());
+
+  const edgesGeometry = new EdgesGeometry(geometry);
+  const wireframe = new LineSegments(edgesGeometry, LINES_MATERIAL.clone());
 
   return { mesh, wireframe };
 }

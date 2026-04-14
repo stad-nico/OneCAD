@@ -31,15 +31,15 @@ export class ClientGateway implements OnGatewayConnection, OnGatewayDisconnect {
     this.logger.log(`Client disconnected: ${client.id}`);
   }
 
-  @SubscribeMessage(ClientEvent.ModelUpdate)
-  handleModelUpdate(
-    @MessageBody() payload: ClientEventPayload<ClientEvent.ModelUpdate>,
+  @SubscribeMessage(ClientEvent.AssemblyUpdate)
+  handleAssemblyUpdate(
+    @MessageBody() payload: ClientEventPayload<ClientEvent.AssemblyUpdate>,
     @ConnectedSocket() client: Socket,
   ): void {
-    const { id, name, steps } = payload.model;
+    const { assembly } = payload;
 
     this.logger.log(
-      `Received ${ClientEvent.ModelUpdate} from ${client.id} for model ${name} (${id})`,
+      `Received ${ClientEvent.AssemblyUpdate} from ${client.id} for assembly ${assembly.name} (${assembly.id})`,
     );
 
     const server = ExposingIoAdapter.getServer();
@@ -49,15 +49,15 @@ export class ClientGateway implements OnGatewayConnection, OnGatewayDisconnect {
       return;
     }
 
-    server.of("/frontend").emit(FrontendEvent.ModelUpdate, {
-      event: FrontendEvent.ModelUpdate,
-      payload: { model: { id, name, steps } },
+    server.of("/frontend").emit(FrontendEvent.AssemblyUpdate, {
+      event: FrontendEvent.AssemblyUpdate,
+      payload: { assembly },
     } satisfies FrontendEventMessage);
 
-    this.frontendGateway.cacheModel({ id, name, steps });
+    this.frontendGateway.cacheAssembly(assembly);
 
     this.logger.debug(
-      `Broadcasted ${FrontendEvent.ModelUpdate} from ${client.id} to frontend namespace`,
+      `Broadcasted ${FrontendEvent.AssemblyUpdate} from ${client.id} to frontend namespace`,
     );
   }
 }

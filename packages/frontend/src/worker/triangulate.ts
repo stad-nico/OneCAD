@@ -1,6 +1,7 @@
+// ! TODO: refactor !
 import type { OpenCascadeInstance, Poly_Triangulation, TopoDS_Shape } from 'opencascade.js';
 
-interface TriangulationResult {
+export interface TriangulationResult {
   vertices: Float32Array;
   normals: Float32Array;
   indices: Uint32Array;
@@ -24,8 +25,7 @@ export function triangulate(oc: OpenCascadeInstance, shape: TopoDS_Shape): Trian
 
   while (explorer.More()) {
     const face = oc.TopoDS.Face_1(explorer.Current());
-    // @ts-ignore
-    const triangulation = oc.BRep_Tool.Triangulation(face, loc);
+    const triangulation = oc.BRep_Tool.Triangulation(face, loc, 0);
 
     if (!triangulation.IsNull()) {
       const tr = triangulation.get();

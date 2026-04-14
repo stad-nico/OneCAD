@@ -1,6 +1,6 @@
 import { Component, computed, inject, linkedSignal, resource } from '@angular/core';
 import { toSignal } from '@angular/core/rxjs-interop';
-import { Maybe, Model } from '@opentscad/types';
+import { AstAssemblyNode, Logger, Maybe } from '@opentscad/types';
 import { WorkerMessageType } from '../worker/types';
 import { callWorker } from '../worker/worker-caller';
 import { ModelListComponent } from './model-list/model-list.component';
@@ -19,28 +19,38 @@ import { visualize } from './visualize';
 export class App {
   private readonly modelService = inject(ModelService);
 
-  private readonly changedModel = toSignal<Maybe<Model>>(this.modelService.modelChange$, {
+  private readonly changedModel = toSignal<Maybe<AstAssemblyNode>>(this.modelService.modelChange$, {
     initialValue: undefined,
   });
 
   public readonly models = this.modelService.models;
 
-  public readonly selectedModel = linkedSignal(() => this.changedModel());
+  // Use a regular model signal that can be updated both from linked signal and from user interaction
+  public readonly selectedModel = linkedSignal(() => {
+    const changed = this.changedModel();
+    Logger.debug('[App] Changed model updated', { changed });
+    return changed;
+  });
 
   private readonly meshVisualizationsResource = resource({
     params: this.selectedModel,
-    loader: async ({ params }) => {
-      const { steps } = params;
+    loader: async ({ params: assembly }) => {
+      if (!assembly) {
+        Logger.debug('[App] No assembly to evaluate');
+        return [];
+      }
 
-      const triangulation = await callWorker(WorkerMessageType.TriangulateMeshFromSteps, { steps });
-
+      Logger.debug('[App] Evaluating assembly', { assembly });
+      const { triangulation } = await callWorker(WorkerMessageType.EvaluateAssembly, { assembly });
+      Logger.debug('[App] Assembly evaluated, visualizing', { triangulation });
       const mesh = visualize(triangulation);
+      Logger.debug('[App] Assembly visualized', { mesh });
 
-      return mesh;
+      return [mesh];
     },
   });
 
   protected readonly meshVisualizations = computed(() =>
-    this.meshVisualizationsResource.hasValue() ? [this.meshVisualizationsResource.value()] : [],
+    this.meshVisualizationsResource.hasValue() ? this.meshVisualizationsResource.value() : [],
   );
 }

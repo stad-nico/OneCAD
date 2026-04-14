@@ -1,5 +1,5 @@
 import { ChangeDetectionStrategy, Component, input, model } from '@angular/core';
-import { Model } from '@opentscad/types';
+import { AstAssemblyNode } from '@opentscad/types';
 
 @Component({
   selector: 'app-model-list',
@@ -12,12 +12,26 @@ import { Model } from '@opentscad/types';
 })
 export class ModelListComponent {
   /**
-   * The currently available models.
+   * The currently available models (Solid or Assembly).
    */
-  public readonly models = input.required<Array<Model>>();
+  public readonly models = input.required<Array<AstAssemblyNode>>();
 
   /**
    * The currently selected model.
    */
-  public readonly selectedModel = model<Model>();
+  public readonly selectedModel = model<AstAssemblyNode | undefined>();
+
+  /**
+   * Get the ID of a model.
+   */
+  public getId(model: AstAssemblyNode): string {
+    return model.id;
+  }
+
+  /**
+   * Get the name of a model.
+   */
+  public getName(model: AstAssemblyNode): string {
+    return model.name;
+  }
 }

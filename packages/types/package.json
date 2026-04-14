@@ -19,8 +19,9 @@
     "dev": "vite build --watch"
   },
   "devDependencies": {
+    "@types/node": "^25.6.0",
+    "typescript": "6.0.2",
     "vite": "8.0.3",
-    "vite-plugin-dts": "4.5.4",
-    "typescript": "6.0.2"
+    "vite-plugin-dts": "4.5.4"
   }
 }

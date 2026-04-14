@@ -24,7 +24,7 @@
                 "input": "public"
               },
               {
-                "glob": "opencascade.wasm",
+                "glob": "opencascade.full.wasm",
                 "input": "node_modules/opencascade.js/dist",
                 "output": "/assets/"
               }

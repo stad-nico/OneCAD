@@ -1,6 +1,6 @@
 import { Injectable } from '@angular/core';
 import { toSignal } from '@angular/core/rxjs-interop';
-import { FrontendEvent, FrontendEventMessage, Logger, Model } from '@opentscad/types';
+import { AstAssemblyNode, FrontendEvent, FrontendEventMessage, Logger } from '@opentscad/types';
 import { filter, map, Observable, scan } from 'rxjs';
 import { io, Socket } from 'socket.io-client';
 
@@ -28,8 +28,14 @@ export class ModelService {
    * {@link FrontendEvent.ModelUpdate} message was recevied
    */
   public readonly modelChange$ = this.socket$.pipe(
-    filter((message) => message.event === FrontendEvent.ModelUpdate),
-    map(({ payload }) => payload.model),
+    filter((message) => {
+      const isAssemblyUpdate = message.event === FrontendEvent.AssemblyUpdate;
+      if (isAssemblyUpdate) {
+        Logger.debug('[ModelService] Assembly update received', { message });
+      }
+      return isAssemblyUpdate;
+    }),
+    map(({ payload }) => payload.assembly),
   );
 
   /**
@@ -38,16 +44,16 @@ export class ModelService {
    */
   public readonly models = toSignal(
     this.socket$.pipe(
-      filter((message) => message.event === FrontendEvent.ModelUpdate),
-      map(({ payload }) => payload.model),
+      filter((message) => message.event === FrontendEvent.AssemblyUpdate),
+      map(({ payload }) => payload.assembly),
       scan(
-        (acc, model) =>
-          acc.some((m) => m.id === model.id)
-            ? acc.map((m) => (m.id === model.id ? model : m))
-            : [...acc, model],
-        [] as Array<Model>,
+        (acc, assembly) =>
+          acc.some((m) => m.id === assembly.id)
+            ? acc.map((m) => (m.id === assembly.id ? assembly : m))
+            : [...acc, assembly],
+        [] as Array<AstAssemblyNode>,
       ),
     ),
-    { initialValue: [] as Array<Model> },
+    { initialValue: [] as Array<AstAssemblyNode> },
   );
 }

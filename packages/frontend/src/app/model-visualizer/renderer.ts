@@ -1,9 +1,11 @@
+// ! TODO: refactor !
 import {
   AmbientLight,
   Color,
   DirectionalLight,
   GridHelper,
   Group,
+  LineSegments,
   MOUSE,
   Mesh,
   Object3D,
@@ -12,7 +14,8 @@ import {
   WebGLRenderer,
 } from 'three';
 import { OrbitControls } from 'three/examples/jsm/controls/OrbitControls.js';
-import { LINES_ONLY_MATERIAL, MeshVisualization } from '../visualize';
+import { AssemblyVisualization } from '../shared/types/assembly-tree';
+import { LINES_ONLY_MATERIAL } from '../visualize';
 
 export enum RenderMode {
   Solid = 'solid',
@@ -32,7 +35,7 @@ export class Renderer {
   private controls: OrbitControls;
   private ctrlKeyDown = { value: false };
   private renderMode: RenderMode = RenderMode.Solid;
-  private visualizations: MeshVisualization[] = [];
+  private visualizations: AssemblyVisualization[] = [];
 
   constructor(canvas: HTMLCanvasElement) {
     this.scene = new Scene();
@@ -173,49 +176,88 @@ export class Renderer {
 
   private updateMeshesForMode(): void {
     for (const visualization of this.visualizations) {
-      const { mesh, wireframe } = visualization;
+      const { mesh } = visualization;
 
       switch (this.renderMode) {
         case RenderMode.Solid:
-          mesh.visible = true;
-          mesh.material = this.getSolidMaterial(mesh);
-          wireframe.visible = false;
+          if (mesh) {
+            mesh.visible = true;
+          }
+          // this.setMeshMaterial(meshGroup);
+
+          // if (wireframe) {
+          //   wireframe.visible = false;
+          // }
           break;
         case RenderMode.Transparent:
-          mesh.visible = true;
-          mesh.material = this.getTransparentMaterial(mesh);
-          wireframe.visible = true;
-          wireframe.material = this.getWireframeMaterialForMode(false);
+          if (mesh) {
+            mesh.visible = true;
+          }
+          // this.setMeshMaterial(meshGroup, this.getTransparentMaterial());
+          // if (wireframe) {
+          //   wireframe.visible = true;
+          // }
+          // this.setWireframeMaterial(wireframe, this.getWireframeMaterialForMode(false));
           break;
         case RenderMode.Lines:
-          mesh.visible = false;
-          wireframe.visible = true;
-          wireframe.material = this.getWireframeMaterialForMode(true);
+          if (mesh) {
+            mesh.visible = false;
+          }
+          // if (wireframe) {
+          //   wireframe.visible = true;
+          // }
+          // this.setWireframeMaterial(wireframe, this.getWireframeMaterialForMode(true));
           break;
       }
     }
   }
 
+  private setMeshMaterial(object: Mesh | Group, material: any): void {
+    if (object instanceof Mesh) {
+      object.material = material;
+    } else if (object instanceof Group) {
+      object.children.forEach((child) => {
+        if (child instanceof Mesh) {
+          child.material = material;
+        }
+      });
+    }
+  }
+
+  private setWireframeMaterial(object: LineSegments | Group, material: any): void {
+    if (object instanceof LineSegments) {
+      object.material = material;
+    } else if (object instanceof Group) {
+      object.children.forEach((child) => {
+        if (child instanceof LineSegments) {
+          child.material = material;
+        }
+      });
+    }
+  }
+
   private getWireframeMaterialForMode(isLinesOnly: boolean) {
-    return isLinesOnly
-      ? LINES_ONLY_MATERIAL
-      : this.visualizations[0]?.wireframe.material || LINES_ONLY_MATERIAL;
+    return isLinesOnly ? LINES_ONLY_MATERIAL : LINES_ONLY_MATERIAL;
   }
 
-  private getSolidMaterial(mesh: Mesh) {
-    const material = Array.isArray(mesh.material) ? mesh.material[0] : mesh.material;
-    if (material instanceof Mesh) return material.material;
-    material.transparent = false;
-    material.opacity = 1;
-    return material;
+  private getSolidMaterial() {
+    // Return a solid material - this will be cloned for each mesh
+    // return this.visualizations[0]?.meshGroup instanceof Group
+    //   ? this.visualizations[0].meshGroup.children[0].material
+    //   : undefined;
   }
 
-  private getTransparentMaterial(mesh: Mesh) {
-    const material = Array.isArray(mesh.material) ? mesh.material[0] : mesh.material;
-    if (material instanceof Mesh) return material.material;
-    material.transparent = true;
-    material.opacity = 0.3;
-    return material;
+  private getTransparentMaterial() {
+    // Return a transparent material - this will be cloned for each mesh
+    // const material =
+    //   this.visualizations[0]?.meshGroup instanceof Group
+    //     ? this.visualizations[0].meshGroup.children[0].material
+    //     : undefined;
+    // if (material && !Array.isArray(material)) {
+    //   material.transparent = true;
+    //   material.opacity = 0.3;
+    // }
+    // return material;
   }
 
   clear(): void {
@@ -252,9 +294,8 @@ export class Renderer {
     this.visualizations = [];
   }
 
-  addVisualization(visualization: MeshVisualization): void {
+  addVisualization(visualization: AssemblyVisualization): void {
     this.scene.add(visualization.mesh);
-    this.scene.add(visualization.wireframe);
     this.visualizations.push(visualization);
     this.updateMeshesForMode();
   }

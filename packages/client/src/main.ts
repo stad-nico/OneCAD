@@ -1,8 +1,8 @@
 import {
+  AstAssemblyNode,
   ClientEvent,
   ClientEventPayload,
   Logger,
-  Model,
 } from "@opentscad/types";
 import * as path from "path";
 import { loadConfigOrThrow } from "./config";
@@ -23,23 +23,20 @@ const socket = createClient(config.serverUrl, () => {
     `[client] broadcasting ${WATCHED_MODELS.size} cached models to new connection`,
   );
   for (const model of WATCHED_MODELS.values()) {
-    const { id, name, steps } = model;
-    socket.emit(ClientEvent.ModelUpdate, {
-      model: { id, name, steps },
-    } satisfies ClientEventPayload<ClientEvent.ModelUpdate>);
+    socket.emit(ClientEvent.AssemblyUpdate, {
+      assembly: model,
+    } satisfies ClientEventPayload<ClientEvent.AssemblyUpdate>);
   }
 });
 
-const WATCHED_MODELS = new Map<string, Model>();
+const WATCHED_MODELS = new Map<string, AstAssemblyNode>();
 
 createModelWatcher(config.watch, configDir, (model) => {
-  const { id, name, steps } = model;
+  Logger.log(`[client] ${model.id} changed`);
 
-  Logger.log(`[client] ${id} changed`);
+  WATCHED_MODELS.set(model.id, model);
 
-  WATCHED_MODELS.set(id, model);
-
-  socket.emit(ClientEvent.ModelUpdate, {
-    model: { id, name, steps },
-  } satisfies ClientEventPayload<ClientEvent.ModelUpdate>);
+  socket.emit(ClientEvent.AssemblyUpdate, {
+    assembly: model,
+  } satisfies ClientEventPayload<ClientEvent.AssemblyUpdate>);
 });

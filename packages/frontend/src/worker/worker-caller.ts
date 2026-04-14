@@ -1,5 +1,5 @@
 import { Logger } from '@opentscad/types';
-import { BehaviorSubject } from 'rxjs';
+import { BehaviorSubject, filter, firstValueFrom } from 'rxjs';
 import {
   WorkerMessageType,
   WorkerRequestPayload,
@@ -32,7 +32,7 @@ type PendingRequest<Type extends WorkerMessageType> = {
  * ensure type safety when resolving promises with the correct response payload types.
  */
 const pendingRequests: {
-  [K in WorkerMessageType]?: Map<
+  [Type in WorkerMessageType]?: Map<
     /**
      * The id of the request message
      */
@@ -40,9 +40,19 @@ const pendingRequests: {
     /**
      * The pending request promise
      */
-    PendingRequest<K>
+    PendingRequest<Type>
   >;
 } = {};
+
+/**
+ * Retrieves a pending request for a specific message type and id.
+ */
+function getPendingRequest<Type extends WorkerMessageType>(
+  type: Type,
+  id: string,
+): PendingRequest<Type> | undefined {
+  return pendingRequests[type]?.get(id);
+}
 
 /**
  * The web worker instance used for offloading computationally intensive tasks from the main thread.
@@ -54,54 +64,59 @@ callWorker(WorkerMessageType.Initialize);
 /**
  *
  */
-worker.addEventListener(
-  'message',
-  (event: MessageEvent<WorkerResponseMessage<WorkerMessageType>>) => {
-    if (event.data.type === WorkerMessageType.Initialize) {
-      workerReady$.next(true);
-    }
-  },
-);
+worker.addEventListener('message', (event: MessageEvent<WorkerResponseMessage>) => {
+  if (event.data.type === WorkerMessageType.Initialize) {
+    workerReady$.next(true);
+  }
+});
 
-worker.onmessage = <Type extends WorkerMessageType>(
-  event: MessageEvent<WorkerResponseMessage<Type>>,
-) => {
-  const { id, type, payload, status } = event.data;
+worker.onmessage = (event: MessageEvent<WorkerResponseMessage>) => {
+  const message = event.data;
 
-  Logger.debug(`[API] Received message from worker: ${type} with id ${id} and status ${status}`, {
-    eventData: event.data,
-  });
+  Logger.debug(
+    `[API] Received message from worker: ${message.type} with id ${message.id} and status ${message.status}`,
+    {
+      eventData: message,
+    },
+  );
 
-  const typeMap = pendingRequests[type];
-  const pendingRequest = typeMap?.get(id);
+  const pendingRequest = getPendingRequest(message.type, message.id);
 
   if (!pendingRequest) {
-    Logger.warn(`[API] No pending request found for worker response with type ${type} (id: ${id})`);
+    Logger.warn(
+      `[API] No pending request found for worker response with type ${message.type} (id: ${message.id})`,
+    );
     return;
   }
 
-  typeMap!.delete(id);
+  pendingRequests[message.type]!.delete(message.id);
 
-  if (status === 'success') {
-    pendingRequest.resolve(payload);
+  if (message.status === 'success') {
+    pendingRequest.resolve(message.payload);
   } else {
     pendingRequest.reject(
-      new Error(`Worker responded with error for message type ${type} (id: ${id})`),
+      new Error(`Worker responded with error for message type ${message.type} (id: ${message.id})`),
     );
   }
 };
 
 /**
  * Sends a message to the web worker and returns a promise that resolves with the response.
+ * If the worker is not yet initialized, this function will wait for it to be ready before sending the message.
  *
  * @param type the type of the message to send.
  * @param payload the payload for the message.
  * @returns a promise that resolves with the response from the worker or rejects if an error occurs.
  */
-export function callWorker<Type extends WorkerMessageType>(
+export async function callWorker<Type extends WorkerMessageType>(
   type: Type,
   ...args: WorkerRequestPayload<Type> extends void ? [] : [payload: WorkerRequestPayload<Type>]
 ): Promise<WorkerResponsePayload<Type>> {
+  // Wait for worker to be ready if this is not an Initialize message
+  if (type !== WorkerMessageType.Initialize) {
+    await firstValueFrom(workerReady$.pipe(filter((isReady) => isReady)));
+  }
+
   const message = { type, id: crypto.randomUUID(), payload: args[0] };
 
   const promise = new Promise<WorkerResponsePayload<Type>>((resolve, reject) => {

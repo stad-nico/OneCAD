@@ -5,9 +5,9 @@ import {
   WebSocketGateway,
 } from "@nestjs/websockets";
 import {
+  AstAssemblyNode,
   FrontendEvent,
   type FrontendEventMessage,
-  Model,
 } from "@opentscad/types";
 import { Socket } from "socket.io";
 
@@ -18,25 +18,25 @@ export class FrontendGateway
   private readonly logger = new Logger(FrontendGateway.name);
 
   /**
-   * A cache of all models that have been recevied by any client so far.
-   * This is needed to broadcast the current state of all models to new frontend
-   * clients that connect in case they connect after the model event was recevied.
+   * A cache of all assemblies that have been recevied by any client so far.
+   * This is needed to broadcast the current state of all assemblies to new frontend
+   * clients that connect in case they connect after the assembly event was recevied.
    */
-  private readonly cachedModels: Map<string, Model> = new Map();
+  private readonly cachedAssemblies: Map<string, AstAssemblyNode> = new Map();
 
-  public cacheModel(model: Model): void {
-    this.cachedModels.set(model.id, model);
-    this.logger.log(`Cached model: ${model.name} (${model.id})`);
+  public cacheAssembly(assembly: AstAssemblyNode): void {
+    this.cachedAssemblies.set(assembly.id, assembly);
+    this.logger.log(`Cached assembly: ${assembly.name} (${assembly.id})`);
   }
 
   public handleConnection(client: Socket): void {
     this.logger.log(`[Frontend] connected: ${client.id}`);
 
-    for (const model of this.cachedModels.values()) {
-      client.emit(FrontendEvent.ModelUpdate, {
-        payload: { model },
-        event: FrontendEvent.ModelUpdate,
-      } satisfies FrontendEventMessage<FrontendEvent.ModelUpdate>);
+    for (const assembly of this.cachedAssemblies.values()) {
+      client.emit(FrontendEvent.AssemblyUpdate, {
+        payload: { assembly },
+        event: FrontendEvent.AssemblyUpdate,
+      } satisfies FrontendEventMessage<FrontendEvent.AssemblyUpdate>);
     }
   }
 

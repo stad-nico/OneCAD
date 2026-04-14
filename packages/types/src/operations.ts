@@ -1,3 +1,5 @@
+import { Component } from "./assembly";
+
 /**
  * The operation of a step in the model.
  * This can be a transformation (translate, rotate, scale)
@@ -10,7 +12,6 @@ export enum Operation {
   Scale = "scale",
   Union = "union",
   Difference = "difference",
-  Intersection = "intersection",
   Box = "box",
   Cube = "cube",
   Sphere = "sphere",
@@ -21,44 +22,94 @@ export enum Operation {
  * Params for the {@link Operation.Translate} operation.
  */
 interface TranslateParams {
+  /**
+   * The distance to translate along the x-axis.
+   */
   x: number;
+
+  /**
+   * The distance to translate along the y-axis.
+   */
   y: number;
+
+  /**
+   * The distance to translate along the z-axis.
+   */
   z: number;
+
+  /**
+   * The component to translate.
+   */
+  component: Component;
 }
 
 /**
  * Params for the {@link Operation.Rotate} operation.
  */
 interface RotateParams {
+  /**
+   * The angle to rotate around the x-axis.
+   */
   x: number;
-  y: number;
-  z: number;
-}
 
-/**
- * Params for the {@link Operation.Scale} operation.
- */
-interface RotateParams {
-  x: number;
+  /**
+   * The angle to rotate around the y-axis.
+   */
   y: number;
+
+  /**
+   * The angle to rotate around the z-axis.
+   */
   z: number;
+
+  /**
+   * The component to rotate.
+   */
+  component: Component;
 }
 
 /**
  * Params for the {@link Operation.Scale} operation.
  */
 interface ScaleParams {
+  /**
+   * The scale factor along the x-axis.
+   */
   x: number;
+
+  /**
+   * The scale factor along the y-axis.
+   */
   y: number;
+
+  /**
+   * The scale factor along the z-axis.
+   */
   z: number;
+
+  /**
+   * The component to scale.
+   */
+  component: Component;
 }
 
 /**
  * Params for the {@link Operation.Box} operation.
  */
 interface BoxParams {
+  /**
+   * The width of the box.
+   */
   width: number;
+
+  /**
+   * The height of the box.
+   */
   height: number;
+
+  /**
+   * The depth of the box.
+   */
   depth: number;
 }
 
@@ -66,6 +117,9 @@ interface BoxParams {
  * Params for the {@link Operation.Cube} operation.
  */
 interface CubeParams {
+  /**
+   * The size of the cube.
+   */
   size: number;
 }
 
@@ -73,6 +127,9 @@ interface CubeParams {
  * Params for the {@link Operation.Sphere} operation.
  */
 interface SphereParams {
+  /**
+   * The radius of the sphere.
+   */
   radius: number;
 }
 
@@ -80,7 +137,14 @@ interface SphereParams {
  * Params for the {@link Operation.Cylinder} operation.
  */
 interface CylinderParams {
+  /**
+   * The radius of the cylinder.
+   */
   radius: number;
+
+  /**
+   * The height of the cylinder.
+   */
   height: number;
 }
 
@@ -88,21 +152,25 @@ interface CylinderParams {
  * Params for the {@link Operation.Union} operation.
  */
 interface UnionParams {
-  shapes: Step[];
+  /**
+   * The components to union together.
+   */
+  components: Array<Component>;
 }
 
 /**
  * Params for the {@link Operation.Difference} operation.
  */
 interface DifferenceParams {
-  shapes: Step[];
-}
+  /**
+   * The component to subtract from.
+   */
+  target: Component;
 
-/**
- * Params for the {@link Operation.Intersection} operation.
- */
-interface IntersectionParams {
-  shapes: Step[];
+  /**
+   * The components to subtract.
+   */
+  tools: Array<Component>;
 }
 
 /**
@@ -118,10 +186,14 @@ interface OperationParamsMap {
   [Operation.Cylinder]: CylinderParams;
   [Operation.Union]: UnionParams;
   [Operation.Difference]: DifferenceParams;
-  [Operation.Intersection]: IntersectionParams;
 }
 
 type OperationKey = keyof OperationParamsMap;
+
+/**
+ * Type helper to get the params type for a given operation.
+ */
+export type OperationParameters<K extends OperationKey> = OperationParamsMap[K];
 
 /**
  * Type for a step in the model.

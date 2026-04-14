@@ -1,6 +1,8 @@
+export * from "./assembly";
+export * from "./ast";
 export { ClientEvent, type ClientEventPayload } from "./client-events";
+export { type MeshNode } from "./evaluation";
 export { FrontendEvent, type FrontendEventMessage } from "./frontend-events";
 export { Logger } from "./logger";
 export { type Maybe } from "./maybe";
-export { isModel, type Model } from "./model";
-export { Operation, type Step } from "./operations";
+export { Operation, type OperationParameters, type Step } from "./operations";

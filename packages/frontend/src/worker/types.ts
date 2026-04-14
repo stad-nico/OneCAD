@@ -1,13 +1,14 @@
-import { Step } from '@opentscad/types';
+import { AstAssemblyNode } from '@opentscad/types';
+import { TriangulationResult } from './triangulate';
 
 /**
  * Type of message to send to the web worker or to expect in a response from the worker, determining the structure of the payload.
  */
 export enum WorkerMessageType {
   /**
-   * Message for building a shape from a series of operations and triangulating it.
+   * Message for evaluating an assembly.
    */
-  TriangulateMeshFromSteps = 'TriangulateMeshFromSteps',
+  EvaluateAssembly = 'EvaluateAssembly',
 
   /**
    * Message for initializing the worker, used to perform any necessary setup before processing other messages.
@@ -16,49 +17,34 @@ export enum WorkerMessageType {
 }
 
 /**
- * Payload for a worker  message of type {@link WorkerMessageType.TriangulateMeshFromSteps}
- * containing the sequence of steps to construct the shape to be triangulated.
+ * Payload for a worker request message of type {@link WorkerMessageType.EvaluateAssembly}
+ * containing either a Solid or Assembly to be evaluated.
  */
-interface WorkerRequestMessageTriangulateMeshFromStepsPayload {
+interface WorkerRequestMessageEvaluateAssemblyPayload {
   /**
-   * The sequence of steps to construct the shape to be triangulated.
+   * The assembly to evaluate
    */
-  steps: Array<Step>;
+  assembly: AstAssemblyNode;
 }
 
 /**
- * Payload for a worker response message of type {@link WorkerMessageType.TriangulateMeshFromSteps}
- * containing the triangulation result of the shape constructed from the provided steps.
+ * Payload for a worker response message of type {@link WorkerMessageType.EvaluateAssembly}
+ * containing the resulting triangulation.
  */
-interface WorkerResponseMessageTriangulateMeshFromStepsPayload {
+interface WorkerResponseMessageEvaluateAssemblyPayload {
   /**
-   * The triangulation result
+   * The resulting triangulation
    */
-  triangulation: {
-    /**
-     * The vertices of the mesh
-     */
-    vertices: Float32Array;
-
-    /**
-     * The normals of the mesh
-     */
-    normals: Float32Array;
-
-    /**
-     * The indices of the mesh
-     */
-    indices: Uint32Array;
-  };
+  triangulation: TriangulationResult;
 }
 
 /**
  * Mapping of worker message types to their corresponding request and response payload types.
  */
 interface WorkerMessageRequestResponsePayloadMapping {
-  [WorkerMessageType.TriangulateMeshFromSteps]: {
-    request: WorkerRequestMessageTriangulateMeshFromStepsPayload;
-    response: WorkerResponseMessageTriangulateMeshFromStepsPayload;
+  [WorkerMessageType.EvaluateAssembly]: {
+    request: WorkerRequestMessageEvaluateAssemblyPayload;
+    response: WorkerResponseMessageEvaluateAssemblyPayload;
   };
 
   [WorkerMessageType.Initialize]: {
@@ -80,46 +66,50 @@ export type WorkerResponsePayload<Type extends WorkerMessageType> =
   WorkerMessageRequestResponsePayloadMapping[Type]['response'];
 
 /**
- * Type representing a message sent to the worker
+ * Type representing a message sent to the worker - using a discriminated union derived from the mapping
  */
-export type WorkerRequestMessage<Type extends WorkerMessageType = WorkerMessageType> = {
-  /**
-   * A unique identifier for the message, used to correlate requests and responses between the main thread and the worker.
-   */
-  id: string;
+export type WorkerRequestMessage = {
+  [Type in WorkerMessageType]: {
+    /**
+     * A unique identifier for the message, used to correlate requests and responses between the main thread and the worker.
+     */
+    id: string;
 
-  /**
-   * The type of the message, determining the structure of the payload.
-   */
-  type: Type;
+    /**
+     * The type of the message, determining the structure of the payload.
+     */
+    type: Type;
 
-  /**
-   * The payload for the message, which depends on the type of message being sent.
-   */
-  payload: WorkerRequestPayload<Type>;
-};
+    /**
+     * The payload for the message, which depends on the type of message being sent.
+     */
+    payload: WorkerRequestPayload<Type>;
+  };
+}[WorkerMessageType];
 
 /**
- * Type representing a response message from the worker
+ * Type representing a response message from the worker - using a discriminated union derived from the mapping
  */
-export type WorkerResponseMessage<Type extends WorkerMessageType = WorkerMessageType> = {
-  /**
-   * The unique identifier of the message this response corresponds to.
-   */
-  id: string;
+export type WorkerResponseMessage = {
+  [Type in WorkerMessageType]: {
+    /**
+     * The unique identifier of the message this response corresponds to.
+     */
+    id: string;
 
-  /**
-   * The type of the message this response corresponds to.
-   */
-  type: Type;
+    /**
+     * The type of the message this response corresponds to.
+     */
+    type: Type;
 
-  /**
-   * The status of the response, indicating whether the operation was successful or resulted in an error.
-   */
-  status: 'success' | 'error';
+    /**
+     * The status of the response, indicating whether the operation was successful or resulted in an error.
+     */
+    status: 'success' | 'error';
 
-  /**
-   * The payload of the response, which depends on the type of message and the status.
-   */
-  payload: WorkerResponsePayload<Type>;
-};
+    /**
+     * The payload of the response, which depends on the type of message and the status.
+     */
+    payload: WorkerResponsePayload<Type>;
+  };
+}[WorkerMessageType];

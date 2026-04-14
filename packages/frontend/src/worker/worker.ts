@@ -1,9 +1,8 @@
+// ! TODO: refactor: split into multiple !
 import { Logger, Maybe } from '@opentscad/types';
-import type { OpenCascadeInstance } from 'opencascade.js';
-// @ts-ignore
-import initCascade from 'opencascade.js/dist/opencascade.wasm?init';
-import { executeSteps } from './execute-steps';
-import { triangulate } from './triangulate';
+import type { OpenCascadeInstance } from 'opencascade.js/dist/opencascade.full';
+import initOpenCascadeLib from 'opencascade.js/dist/opencascade.full.js';
+import { evaluateAssembly } from './evaluate-shape-node';
 import { WorkerMessageType, WorkerRequestMessage, WorkerResponseMessage } from './types';
 
 /**
@@ -46,8 +45,7 @@ self.onmessage = async (event: MessageEvent<WorkerRequestMessage>) => {
  * If the OpenCascade instance is not initialized yet, the request is queued
  * and will be processed once the initialization is complete.
  *
- * Otherwise, we switch the request type, execute the corresponding action and post the response to the main thread.
- * Right now, there is only the request to create a triangulation from the shape operations.
+ * Otherwise, we process the shape (either a Solid or Assembly) and post the response to the main thread.
  *
  * @param request the request from the main thread
  */
@@ -59,19 +57,17 @@ export async function handleRequest(request: WorkerRequestMessage): Promise<void
     return;
   }
 
-  switch (request.type) {
-    case WorkerMessageType.TriangulateMeshFromSteps: {
-      const shape = executeSteps(openCascadeInstance, request.payload!.steps);
+  if (request.type === WorkerMessageType.EvaluateAssembly) {
+    const { assembly } = request.payload;
 
-      const triangulation = triangulate(openCascadeInstance, shape);
+    const triangulation = await evaluateAssembly(openCascadeInstance, assembly);
 
-      self.postMessage({
-        id: request.id,
-        type: WorkerMessageType.TriangulateMeshFromSteps,
-        status: 'success',
-        payload: { triangulation },
-      } satisfies WorkerResponseMessage<WorkerMessageType.TriangulateMeshFromSteps>);
-    }
+    self.postMessage({
+      id: request.id,
+      type: WorkerMessageType.EvaluateAssembly,
+      status: 'success',
+      payload: { triangulation },
+    } satisfies WorkerResponseMessage);
   }
 }
 
@@ -85,25 +81,29 @@ async function initOpenCascade(request: WorkerRequestMessage): Promise<void> {
   Logger.info('[Worker] Initializing OpenCascade...');
 
   try {
-    const instance = await initCascade();
+    // @ts-ignore
+    const instance: OpenCascadeInstance = await initOpenCascadeLib({
+      locateFile: (path: string) => {
+        if (path.endsWith('.wasm')) {
+          return '/assets/opencascade.full.wasm';
+        }
+        return path;
+      },
+    });
 
     Logger.info('[Worker] OpenCascade initialized successfully', { instance });
 
     openCascadeInstance = instance;
   } catch (error) {
     Logger.error('[Worker] Failed to initialize OpenCascade', error);
-  }
 
-  try {
-    Logger.info('[Worker] Processing queued requests', { QUEUED_REQUESTS });
-
-    for (const request of QUEUED_REQUESTS) {
-      await handleRequest(request);
-    }
-
-    Logger.info('[Worker] Finished processing queued requests');
-  } catch (error) {
-    Logger.error('[Worker] Error processing queued requests', error);
+    self.postMessage({
+      id: request.id,
+      type: WorkerMessageType.Initialize,
+      status: 'error',
+      payload: void 0,
+    } satisfies WorkerResponseMessage);
+    return;
   }
 
   self.postMessage({
@@ -111,5 +111,22 @@ async function initOpenCascade(request: WorkerRequestMessage): Promise<void> {
     type: WorkerMessageType.Initialize,
     status: 'success',
     payload: void 0,
-  } satisfies WorkerResponseMessage<WorkerMessageType.Initialize>);
+  } satisfies WorkerResponseMessage);
+
+  if (QUEUED_REQUESTS.length > 0) {
+    try {
+      Logger.info('[Worker] Processing queued requests', { count: QUEUED_REQUESTS.length });
+
+      const requestsToProcess = [...QUEUED_REQUESTS];
+      QUEUED_REQUESTS.length = 0;
+
+      for (const queuedRequest of requestsToProcess) {
+        await handleRequest(queuedRequest);
+      }
+
+      Logger.info('[Worker] Finished processing queued requests');
+    } catch (error) {
+      Logger.error('[Worker] Error processing queued requests', error);
+    }
+  }
 }

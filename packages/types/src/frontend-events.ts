@@ -1,27 +1,27 @@
-import { Model } from "./model";
+import { AstAssemblyNode } from "./ast";
 
 /**
  * Event emitted to the frontend by the server
  */
 export enum FrontendEvent {
-  ModelUpdate = "model:update",
+  AssemblyUpdate = "assembly:update",
 }
 
 /**
- * Payload for the {@link FrontendEvent.ModelUpdate} event.
+ * Payload for the {@link FrontendEvent.AssemblyUpdate} event.
  */
-interface FrontendModelUpdatePayload {
+interface FrontendAssemblyUpdatePayload {
   /**
-   * The full model data, including its ID, name, and the sequence of steps to construct it.
+   * The full assembly data.
    */
-  model: Model;
+  assembly: AstAssemblyNode;
 }
 
 /**
  * Mapping of frontend events to their payload types.
  */
 interface FrontendEventPayloads {
-  [FrontendEvent.ModelUpdate]: FrontendModelUpdatePayload;
+  [FrontendEvent.AssemblyUpdate]: FrontendAssemblyUpdatePayload;
 }
 
 /**
