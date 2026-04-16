@@ -1,27 +1,33 @@
-import { AstAssemblyNode } from "./ast";
+import { ModelMetadata } from "./core/model-metadata";
+import { Node } from "./core/tree";
 
 /**
  * Event emitted to the frontend by the server
  */
 export enum FrontendEvent {
-  AssemblyUpdate = "assembly:update",
+  ModelUpdate = "model:update",
 }
 
 /**
- * Payload for the {@link FrontendEvent.AssemblyUpdate} event.
+ * Payload for the {@link FrontendEvent.ModelUpdate} event.
  */
-interface FrontendAssemblyUpdatePayload {
+interface FrontendModelUpdatePayload {
   /**
-   * The full assembly data.
+   * The root of the tree representing the model.
    */
-  assembly: AstAssemblyNode;
+  treeRoot: Node;
+
+  /**
+   * The metadata for the model, including name, description, and other relevant information.
+   */
+  metadata: ModelMetadata;
 }
 
 /**
  * Mapping of frontend events to their payload types.
  */
 interface FrontendEventPayloads {
-  [FrontendEvent.AssemblyUpdate]: FrontendAssemblyUpdatePayload;
+  [FrontendEvent.ModelUpdate]: FrontendModelUpdatePayload;
 }
 
 /**

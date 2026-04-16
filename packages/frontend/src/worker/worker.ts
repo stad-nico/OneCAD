@@ -1,8 +1,7 @@
-// ! TODO: refactor: split into multiple !
 import { Logger, Maybe } from '@opentscad/types';
 import type { OpenCascadeInstance } from 'opencascade.js/dist/opencascade.full';
 import initOpenCascadeLib from 'opencascade.js/dist/opencascade.full.js';
-import { evaluateAssembly } from './evaluate-shape-node';
+import { evaluateTree } from './evaluate-tree';
 import { WorkerMessageType, WorkerRequestMessage, WorkerResponseMessage } from './types';
 
 /**
@@ -57,16 +56,16 @@ export async function handleRequest(request: WorkerRequestMessage): Promise<void
     return;
   }
 
-  if (request.type === WorkerMessageType.EvaluateAssembly) {
-    const { assembly } = request.payload;
+  if (request.type === WorkerMessageType.EvaluateModel) {
+    const { node, showIntermediateSteps } = request.payload;
 
-    const triangulation = await evaluateAssembly(openCascadeInstance, assembly);
+    const triangulation = await evaluateTree(openCascadeInstance, node);
 
     self.postMessage({
       id: request.id,
-      type: WorkerMessageType.EvaluateAssembly,
+      type: WorkerMessageType.EvaluateModel,
       status: 'success',
-      payload: { triangulation },
+      payload: { final: triangulation, steps: [] },
     } satisfies WorkerResponseMessage);
   }
 }

@@ -14,8 +14,8 @@ import {
   WebGLRenderer,
 } from 'three';
 import { OrbitControls } from 'three/examples/jsm/controls/OrbitControls.js';
-import { AssemblyVisualization } from '../shared/types/assembly-tree';
-import { LINES_ONLY_MATERIAL } from '../visualize';
+import { AssemblyVisualization } from '../../utils/shared-types';
+import { LINES_ONLY_MATERIAL } from '../../utils/visualize';
 
 export enum RenderMode {
   Solid = 'solid',

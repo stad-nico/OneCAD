@@ -1,0 +1,61 @@
+<!-- Models List -->
+<div class="space-y-3">
+  <h2 class="text-lg font-bold text-slate-200">Models</h2>
+
+  @if (models().length === 0) {
+    <div class="text-center py-8 text-slate-400">
+      <p class="text-sm">No models loaded</p>
+    </div>
+  } @else {
+    <div class="space-y-2">
+      @for (model of models(); track model.metadata.name) {
+        @let isSelected = selectedModel() === model;
+
+        <button
+          [class.bg-blue-600]="isSelected"
+          [class.hover:bg-blue-700]="isSelected"
+          [class.border-blue-400]="isSelected"
+          [class.shadow-lg]="isSelected"
+          [class.bg-slate-800]="!isSelected"
+          [class.border-slate-700]="!isSelected"
+          [class.hover:bg-slate-700]="!isSelected"
+          [class.hover:border-slate-600]="!isSelected"
+          (click)="selectModel(model)"
+          class="w-full px-4 py-3 rounded-lg transition-all duration-200 text-slate-100 border text-left space-y-1"
+        >
+          <div class="font-semibold">{{ getModelName(model) }}</div>
+          <div class="text-xs text-slate-400">{{ getModelDescription(model) }}</div>
+        </button>
+      }
+    </div>
+  }
+</div>
+
+<!-- Loading State -->
+@if (isLoading()) {
+  <div class="space-y-3">
+    <h3 class="text-sm font-semibold text-slate-300">Evaluating Model...</h3>
+    <app-loading-skeleton></app-loading-skeleton>
+  </div>
+} @else if (error()) {
+  <!-- Error Display -->
+  <app-error-display [error]="error()"></app-error-display>
+} @else if (selectedModel() && evaluationSteps().length > 0 && showIntermediateSteps()) {
+  <!-- Intermediate Steps Tree -->
+  <div class="space-y-3 flex-1 overflow-y-auto">
+    <h3 class="text-sm font-semibold text-slate-300">Evaluation Steps</h3>
+    <app-model-tree
+      [steps]="evaluationSteps()"
+      [selectedStepId]="selectedNode()?.id ?? null"
+      (stepSelected)="selectStep($event)"
+    ></app-model-tree>
+  </div>
+} @else if (selectedModel() && !showIntermediateSteps() && selectedNode()) {
+  <!-- Show Final Result Info -->
+  <div class="bg-slate-800 rounded-lg p-3 space-y-2 border border-slate-700">
+    <h3 class="text-sm font-semibold text-slate-300">Result</h3>
+    @if (selectedNode(); as node) {
+      <p class="text-xs text-slate-400">{{ node.label }}</p>
+    }
+  </div>
+}

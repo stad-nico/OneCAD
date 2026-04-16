@@ -1,20 +1,10 @@
-import { Logger } from "@nestjs/common";
-import {
-  OnGatewayConnection,
-  OnGatewayDisconnect,
-  WebSocketGateway,
-} from "@nestjs/websockets";
-import {
-  AstAssemblyNode,
-  FrontendEvent,
-  type FrontendEventMessage,
-} from "@opentscad/types";
-import { Socket } from "socket.io";
+import { Logger } from '@nestjs/common';
+import { OnGatewayConnection, OnGatewayDisconnect, WebSocketGateway } from '@nestjs/websockets';
+import { FrontendEvent, ModelMetadata, Node, type FrontendEventMessage } from '@opentscad/types';
+import { Socket } from 'socket.io';
 
-@WebSocketGateway({ namespace: "/frontend", cors: true })
-export class FrontendGateway
-  implements OnGatewayConnection, OnGatewayDisconnect
-{
+@WebSocketGateway({ namespace: '/frontend', cors: true })
+export class FrontendGateway implements OnGatewayConnection, OnGatewayDisconnect {
   private readonly logger = new Logger(FrontendGateway.name);
 
   /**
@@ -22,21 +12,21 @@ export class FrontendGateway
    * This is needed to broadcast the current state of all assemblies to new frontend
    * clients that connect in case they connect after the assembly event was recevied.
    */
-  private readonly cachedAssemblies: Map<string, AstAssemblyNode> = new Map();
+  private readonly cachedModels: Map<string, { treeRoot: Node; metadata: ModelMetadata }> = new Map();
 
-  public cacheAssembly(assembly: AstAssemblyNode): void {
-    this.cachedAssemblies.set(assembly.id, assembly);
-    this.logger.log(`Cached assembly: ${assembly.name} (${assembly.id})`);
+  public cacheModel(model: { treeRoot: Node; metadata: ModelMetadata }): void {
+    this.cachedModels.set(model.metadata.name, model);
+    this.logger.log(`Cached model: ${model.metadata.name}`);
   }
 
   public handleConnection(client: Socket): void {
     this.logger.log(`[Frontend] connected: ${client.id}`);
 
-    for (const assembly of this.cachedAssemblies.values()) {
-      client.emit(FrontendEvent.AssemblyUpdate, {
-        payload: { assembly },
-        event: FrontendEvent.AssemblyUpdate,
-      } satisfies FrontendEventMessage<FrontendEvent.AssemblyUpdate>);
+    for (const model of this.cachedModels.values()) {
+      client.emit(FrontendEvent.ModelUpdate, {
+        payload: model,
+        event: FrontendEvent.ModelUpdate,
+      } satisfies FrontendEventMessage<FrontendEvent.ModelUpdate>);
     }
   }
 

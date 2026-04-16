@@ -8,8 +8,8 @@ import {
   Mesh,
   MeshStandardMaterial,
 } from 'three';
-import { TriangulationResult } from '../worker/triangulate';
-import { AssemblyVisualization } from './shared/types/assembly-tree';
+import { TriangulationResult } from '../../worker/triangulate';
+import { AssemblyVisualization } from './shared-types';
 
 /**
  * Represents the visual components of a triangulated mesh, including the solid mesh and its wireframe edges.
@@ -92,5 +92,10 @@ export function visualize(triangulation: TriangulationResult): AssemblyVisualiza
   const edgesGeometry = new EdgesGeometry(geometry);
   const wireframe = new LineSegments(edgesGeometry, LINES_MATERIAL.clone());
 
-  return { mesh, wireframe };
+  // Wrap in a Group for consistency
+  const group = new Group();
+  group.add(mesh);
+  group.add(wireframe);
+
+  return { mesh: group, wireframe };
 }

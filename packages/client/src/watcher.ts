@@ -1,8 +1,9 @@
-import { Assembly, AstAssemblyNode, Logger } from "@opentscad/types";
-import { FSWatcher, watch } from "chokidar";
-import { readFile, unlink, writeFile } from "fs/promises";
-import { basename, resolve } from "path";
-import { pathToFileURL } from "url";
+import { ClientEvent, ClientEventPayload, Logger } from '@opentscad/types';
+import { FSWatcher, watch } from 'chokidar';
+import { readFile, unlink, writeFile } from 'fs/promises';
+import { resolve } from 'path';
+import { pathToFileURL } from 'url';
+import { isModelFile } from './model-file';
 
 /**
  * Creates a file watcher for the specified patterns and calls the provided callback on model file changes.
@@ -15,7 +16,7 @@ import { pathToFileURL } from "url";
 export function createModelWatcher(
   patterns: Array<string>,
   cwd: string,
-  onModelChange: (model: AstAssemblyNode) => void,
+  onModelChange: (model: ClientEventPayload<ClientEvent.ModelUpdate>) => void
 ): FSWatcher {
   const resolved = patterns.map((p) => resolve(cwd, p));
 
@@ -26,10 +27,10 @@ export function createModelWatcher(
     depth: 99,
   });
 
-  watcher.on("add", (filePath) => handleFileChange(filePath, onModelChange));
-  watcher.on("change", (filePath) => handleFileChange(filePath, onModelChange));
+  watcher.on('add', (filePath) => handleFileChange(filePath, onModelChange));
+  watcher.on('change', (filePath) => handleFileChange(filePath, onModelChange));
 
-  watcher.on("ready", () => {
+  watcher.on('ready', () => {
     const watched = watcher.getWatched();
     Logger.debug(`[watcher] ready. Paths: ${JSON.stringify(watched, null, 2)}`);
   });
@@ -44,11 +45,8 @@ export function createModelWatcher(
  * @param filePath the path of the changed file
  * @param callback the callback to call with the model if the file exports a valid model
  */
-async function handleFileChange(
-  filePath: string,
-  callback: (model: AstAssemblyNode) => void,
-): Promise<void> {
-  if (!filePath.endsWith(".ts")) {
+async function handleFileChange(filePath: string, callback: (model: ClientEventPayload<ClientEvent.ModelUpdate>) => void): Promise<void> {
+  if (!filePath.endsWith('.ts')) {
     return;
   }
 
@@ -61,29 +59,15 @@ async function handleFileChange(
 
   try {
     const module = await import(pathToFileURL(tempPath).href);
-    const defaultExport = module.default?.default || module.default;
 
-    if (!defaultExport || typeof defaultExport !== "function") {
-      Logger.error(
-        `[watcher] file did not export a valid default export: ${basename(filePath)}`,
-      );
+    if (!isModelFile(module)) {
+      Logger.warn(`[watcher] File ${filePath} does not export a valid model. Skipping.`);
       return;
     }
 
-    const maybeModel = (await defaultExport()) as Assembly;
-    console.log("got model", maybeModel);
+    const { default: getModel, metadata } = module.default;
 
-    // if (!isModel(maybeModel)) {
-    // ! TOOD: just warn for now, validate later
-    // Logger.error(
-    // `[watcher] file did not export a valid model: ${basename(filePath)}`,
-    // );
-    // return;
-    // }
-
-    const ast = maybeModel.toAstNode();
-
-    callback(ast);
+    callback({ treeRoot: getModel().node, metadata });
   } finally {
     try {
       await unlink(tempPath);

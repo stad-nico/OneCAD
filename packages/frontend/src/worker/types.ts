@@ -1,4 +1,4 @@
-import { AstAssemblyNode } from '@opentscad/types';
+import { Node } from '@opentscad/types';
 import { TriangulationResult } from './triangulate';
 
 /**
@@ -6,9 +6,9 @@ import { TriangulationResult } from './triangulate';
  */
 export enum WorkerMessageType {
   /**
-   * Message for evaluating an assembly.
+   * Message for evaluating a model.
    */
-  EvaluateAssembly = 'EvaluateAssembly',
+  EvaluateModel = 'EvaluateModel',
 
   /**
    * Message for initializing the worker, used to perform any necessary setup before processing other messages.
@@ -17,34 +17,69 @@ export enum WorkerMessageType {
 }
 
 /**
- * Payload for a worker request message of type {@link WorkerMessageType.EvaluateAssembly}
- * containing either a Solid or Assembly to be evaluated.
+ * Represents a single step in the evaluation, which can be either a final shape or an intermediate step.
  */
-interface WorkerRequestMessageEvaluateAssemblyPayload {
+export interface EvaluationStep {
   /**
-   * The assembly to evaluate
+   * Unique identifier for this step, typically matching the node id in the tree
    */
-  assembly: AstAssemblyNode;
+  id: string;
+
+  /**
+   * Human-readable name/label for this step
+   */
+  label: string;
+
+  /**
+   * The triangulated mesh for this step
+   */
+  triangulation: TriangulationResult;
+
+  /**
+   * The depth/level in the tree hierarchy (0 for root)
+   */
+  depth: number;
 }
 
 /**
- * Payload for a worker response message of type {@link WorkerMessageType.EvaluateAssembly}
- * containing the resulting triangulation.
+ * Payload for a worker request message of type {@link WorkerMessageType.EvaluateModel}
+ * containing the model tree to evaluate.
  */
-interface WorkerResponseMessageEvaluateAssemblyPayload {
+interface WorkerRequestMessageEvaluateModelPayload {
   /**
-   * The resulting triangulation
+   * The tree node representing the model to evaluate
    */
-  triangulation: TriangulationResult;
+  node: Node;
+
+  /**
+   * Whether to generate and return intermediate evaluation steps
+   */
+  showIntermediateSteps: boolean;
+}
+
+/**
+ * Payload for a worker response message of type {@link WorkerMessageType.EvaluateModel}
+ * containing either a single final triangulation or multiple intermediate steps.
+ */
+interface WorkerResponseMessageEvaluateModelPayload {
+  /**
+   * The final shape triangulation (always present)
+   */
+  final: TriangulationResult;
+
+  /**
+   * Intermediate evaluation steps (empty if showIntermediateSteps is false)
+   */
+  steps: EvaluationStep[];
 }
 
 /**
  * Mapping of worker message types to their corresponding request and response payload types.
  */
 interface WorkerMessageRequestResponsePayloadMapping {
-  [WorkerMessageType.EvaluateAssembly]: {
-    request: WorkerRequestMessageEvaluateAssemblyPayload;
-    response: WorkerResponseMessageEvaluateAssemblyPayload;
+  [WorkerMessageType.EvaluateModel]: {
+    request: WorkerRequestMessageEvaluateModelPayload;
+    response: WorkerResponseMessageEvaluateModelPayload;
   };
 
   [WorkerMessageType.Initialize]: {
@@ -56,14 +91,12 @@ interface WorkerMessageRequestResponsePayloadMapping {
 /**
  * Type helper to get the request payload type for a given worker message type
  */
-export type WorkerRequestPayload<Type extends WorkerMessageType> =
-  WorkerMessageRequestResponsePayloadMapping[Type]['request'];
+export type WorkerRequestPayload<Type extends WorkerMessageType> = WorkerMessageRequestResponsePayloadMapping[Type]['request'];
 
 /**
  * Type helper to get the response payload type for a given worker message type
  */
-export type WorkerResponsePayload<Type extends WorkerMessageType> =
-  WorkerMessageRequestResponsePayloadMapping[Type]['response'];
+export type WorkerResponsePayload<Type extends WorkerMessageType> = WorkerMessageRequestResponsePayloadMapping[Type]['response'];
 
 /**
  * Type representing a message sent to the worker - using a discriminated union derived from the mapping
