@@ -3,7 +3,7 @@ import { ModelMetadata, Shape, box, cylinder, difference, union } from '../packa
 export const metadata: ModelMetadata = {
   name: 'Assembly Example',
   description: 'An example model showcasing a simple assembly of multiple shapes.',
-  showIntermediateSteps: false,
+  showIntermediateSteps: true,
 };
 
 export default function createModel(): Shape {

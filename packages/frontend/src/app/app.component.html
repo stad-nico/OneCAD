@@ -1,10 +1,6 @@
 <div class="flex size-full bg-slate-950">
   <!-- Model List Sidebar -->
-  <app-model-list
-    [models]="models()"
-    [selectedModel]="getSelectedModel()"
-    (modelSelected)="setSelectedModel($event)"
-  ></app-model-list>
+  <app-model-list [models]="models()"></app-model-list>
 
   <!-- Main Visualizer -->
   <div class="flex-1 flex flex-col">
@@ -12,7 +8,6 @@
       [triangulation]="selectedNode()?.triangulation || null"
       [label]="selectedNode()?.label || null"
       [isLoading]="isLoading()"
-      [error]="error()"
-    ></app-model-visualizer>
+      [error]="error()"></app-model-visualizer>
   </div>
 </div>

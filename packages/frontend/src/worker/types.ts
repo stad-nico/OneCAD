@@ -1,4 +1,5 @@
 import { Node } from '@opentscad/types';
+import { MeshTree } from './mesh-tree';
 import { TriangulationResult } from './triangulate';
 
 /**
@@ -59,18 +60,15 @@ interface WorkerRequestMessageEvaluateModelPayload {
 
 /**
  * Payload for a worker response message of type {@link WorkerMessageType.EvaluateModel}
- * containing either a single final triangulation or multiple intermediate steps.
+ * containing the mesh tree with triangulations for each node.
  */
 interface WorkerResponseMessageEvaluateModelPayload {
   /**
-   * The final shape triangulation (always present)
+   * The mesh tree containing the complete hierarchy of evaluation results.
+   * Each node in the tree has an id matching the input tree and contains
+   * the mesh for that specific evaluation step.
    */
-  final: TriangulationResult;
-
-  /**
-   * Intermediate evaluation steps (empty if showIntermediateSteps is false)
-   */
-  steps: EvaluationStep[];
+  meshTree: MeshTree;
 }
 
 /**

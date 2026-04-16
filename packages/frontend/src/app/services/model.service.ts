@@ -1,4 +1,4 @@
-import { Injectable } from '@angular/core';
+import { Injectable, Signal } from '@angular/core';
 import { toSignal } from '@angular/core/rxjs-interop';
 import { FrontendEvent, FrontendEventMessage, Logger, ModelMetadata, Node } from '@opentscad/types';
 import { filter, map, Observable, scan } from 'rxjs';
@@ -29,14 +29,14 @@ export class ModelService {
    */
   public readonly modelChange$ = this.socket$.pipe(
     filter((message) => message.event === FrontendEvent.ModelUpdate),
-    map(({ payload }) => payload.metadata.name),
+    map(({ payload }) => payload.metadata.name)
   );
 
   /**
    * A signal that holds the list of all models known to the frontend.
    * It updates whenever a new model update message is received from the backend.
    */
-  public readonly models = toSignal(
+  public readonly models: Signal<Array<{ metadata: ModelMetadata; treeNode: Node }>> = toSignal(
     this.socket$.pipe(
       filter((message) => message.event === FrontendEvent.ModelUpdate),
       map(({ payload }) => ({ metadata: payload.metadata, treeNode: payload.treeRoot })),
@@ -45,9 +45,9 @@ export class ModelService {
           acc.some((m) => m.metadata.name === model.metadata.name)
             ? acc.map((m) => (m.metadata.name === model.metadata.name ? model : m))
             : [...acc, model],
-        [] as Array<{ metadata: ModelMetadata; treeNode: Node }>,
-      ),
+        [] as Array<{ metadata: ModelMetadata; treeNode: Node }>
+      )
     ),
-    { initialValue: [] as Array<{ metadata: ModelMetadata; treeNode: Node }> },
+    { initialValue: [] as Array<{ metadata: ModelMetadata; treeNode: Node }> }
   );
 }

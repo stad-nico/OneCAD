@@ -1,122 +1,76 @@
-import { CommonModule } from '@angular/common';
-import {
-  ChangeDetectionStrategy,
-  Component,
-  computed,
-  inject,
-  input,
-  output,
-  signal,
-} from '@angular/core';
-import { ModelMetadata, Node } from '@opentscad/types';
-import { EvaluationStep } from '../../../worker/types';
-import { ModelEvaluationService } from '../../services/model-evaluation.service';
-import { ErrorDisplayComponent } from '../common/error-display.component';
-import { LoadingSkeletonComponent } from '../common/loading-skeleton.component';
-import { ModelTreeComponent } from './model-tree.component';
+import { NgTemplateOutlet } from '@angular/common';
+import { ChangeDetectionStrategy, Component, computed, input } from '@angular/core';
+import { ModelMetadata, Node, TreeNodeOperation } from '@opentscad/types';
+import { TreeNode as BaseTreeNode, TreeComponent, TreeNodeDirective, TreeRoot } from '@pihub/components/tree';
 
-interface ModelItem {
-  metadata: ModelMetadata;
-  treeNode: Node;
+interface TreeNode extends BaseTreeNode {
+  readonly name: string;
 }
 
 @Component({
   selector: 'app-model-list',
   standalone: true,
-  imports: [CommonModule, ModelTreeComponent, LoadingSkeletonComponent, ErrorDisplayComponent],
+  imports: [TreeComponent, TreeNodeDirective, NgTemplateOutlet],
   templateUrl: './model-list.component.html',
   changeDetection: ChangeDetectionStrategy.OnPush,
-  host: {
-    class:
-      'block p-4 space-y-4 h-full w-96 bg-slate-900 border-r border-slate-800 flex flex-col shadow-2xl overflow-y-auto',
-  },
+  host: { class: 'block p-4 space-y-4 h-full w-96 bg-slate-900 border-r border-slate-800 flex flex-col shadow-2xl' },
 })
 export class ModelListComponent {
-  private readonly evaluationService = inject(ModelEvaluationService);
+  /**
+   * The list of models
+   */
+  public readonly models = input.required<Array<{ metadata: ModelMetadata; treeNode: Node }>>();
 
   /**
-   * The currently available models.
+   * The tree nodes to display in the tree component, derived from the models input.
    */
-  public readonly models = input.required<ModelItem[]>();
+  public readonly treeNodes = computed((): Array<TreeNode> => this.models().flatMap((model) => this.buildTreeNodes(model)));
 
   /**
-   * The currently selected model (input from parent).
+   * Builds the tree nodes for a given model.
+   *
+   * @param model the model to build the tree nodes for.
+   * @returns an array of tree nodes.
    */
-  public readonly selectedModel = input<ModelItem | null>(null);
-
-  /**
-   * Emitted when a model is selected.
-   */
-  public readonly modelSelected = output<ModelItem>();
-
-  /**
-   * Emitted when a step is selected.
-   */
-  public readonly stepSelected = output<EvaluationStep>();
-
-  /**
-   * Internal state to track the currently evaluating model.
-   */
-  private readonly currentEvaluatingModel = signal<ModelItem | null>(null);
-
-  /**
-   * Loading state from evaluation service.
-   */
-  public readonly isLoading = computed(() => this.evaluationService.isLoading$());
-
-  /**
-   * Error state from evaluation service.
-   */
-  public readonly error = computed(() => this.evaluationService.error$());
-
-  /**
-   * Evaluation steps from evaluation service.
-   */
-  public readonly evaluationSteps = computed(() => this.evaluationService.evaluationSteps$());
-
-  /**
-   * Selected node from evaluation service.
-   */
-  public readonly selectedNode = computed(() => this.evaluationService.selectedNode$());
-
-  /**
-   * Compute whether we should show intermediate steps.
-   */
-  public readonly showIntermediateSteps = computed(() => {
-    const model = this.currentEvaluatingModel();
-    return model?.metadata.showIntermediateSteps ?? false;
-  });
-
-  /**
-   * Handle model selection.
-   */
-  public async selectModel(model: ModelItem): Promise<void> {
-    this.currentEvaluatingModel.set(model);
-    this.modelSelected.emit(model);
-
-    // Evaluate the model
-    await this.evaluationService.evaluateModel(model.metadata.name, model.metadata, model.treeNode);
+  private buildTreeNodes(model: { metadata: ModelMetadata; treeNode: Node }): Array<TreeNode> {
+    return [
+      { id: model.metadata.name, name: model.metadata.name, parentId: TreeRoot },
+      ...this.buildTreeNodeRecursively(model.treeNode, model.metadata.name),
+    ];
   }
 
   /**
-   * Handle step selection.
+   * Recursively builds the tree nodes for a given model.
+   *
+   * @param node the current node to process.
+   * @param parentId the id of the parent node.
+   * @returns an array of tree nodes.
    */
-  public selectStep(step: EvaluationStep): void {
-    this.evaluationService.selectStep(step);
-    this.stepSelected.emit(step);
-  }
+  private buildTreeNodeRecursively(node: Node, parentId: string): Array<TreeNode> {
+    const treeNode = { id: node.id, name: node.operation.toString(), parentId };
 
-  /**
-   * Get the display name for a model.
-   */
-  public getModelName(model: ModelItem): string {
-    return model.metadata.name;
-  }
+    let childNodes: Array<Node> = [];
 
-  /**
-   * Get the description for a model.
-   */
-  public getModelDescription(model: ModelItem): string {
-    return model.metadata.description || 'No description';
+    switch (node.operation) {
+      case TreeNodeOperation.Box:
+      case TreeNodeOperation.Sphere:
+      case TreeNodeOperation.Cylinder:
+        childNodes = [];
+        break;
+      case TreeNodeOperation.Translate:
+      case TreeNodeOperation.Rotate:
+      case TreeNodeOperation.Scale:
+        childNodes = [node.left];
+        break;
+      case TreeNodeOperation.Union:
+        childNodes = [node.left, node.right];
+        break;
+
+      case TreeNodeOperation.Difference:
+        childNodes = [node.target, node.tool];
+        break;
+    }
+
+    return [treeNode, ...childNodes.flatMap((child) => this.buildTreeNodeRecursively(child, node.id))];
   }
 }

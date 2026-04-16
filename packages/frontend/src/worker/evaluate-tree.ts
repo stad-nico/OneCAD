@@ -1,20 +1,66 @@
 import { Logger, Node, TreeNodeOperation } from '@opentscad/types';
 import type { OpenCascadeInstance, TopoDS_Shape } from 'opencascade.js/dist/opencascade.full';
-import { triangulate, TriangulationResult } from './triangulate';
+import { MeshData, MeshTree, MeshTreeNode } from './mesh-tree';
+import { triangulate } from './triangulate';
 
 /**
- * Evaluates the given node tree and returns the triangulated result for the final shape.
+ * Evaluates the given node tree and returns a mesh tree with triangulated results for each node.
  *
- * @param openCascade
- * @param node
- * @returns
+ * @param openCascade the OpenCascade instance to use for shape operations
+ * @param node the root node to evaluate
+ * @param showIntermediateSteps whether to include intermediate steps in the mesh tree
+ * @returns a mesh tree containing the complete hierarchy of meshes
  */
-export function evaluateTree(openCascade: OpenCascadeInstance, node: Node): TriangulationResult {
-  Logger.debug('[Worker] Evaluating node', { node });
+export function evaluateTree(openCascade: OpenCascadeInstance, node: Node, showIntermediateSteps: boolean): MeshTree {
+  Logger.debug('[Worker] Evaluating node tree', { node, showIntermediateSteps });
 
+  const root = evaluateNodeToMesh(openCascade, node, showIntermediateSteps);
+
+  return { root };
+}
+
+/**
+ * Evaluates a node in the tree and returns the corresponding mesh tree node.
+ * This function recursively evaluates child nodes and builds the complete mesh hierarchy.
+ *
+ * @param openCascade the OpenCascade instance to use for shape creation and operations
+ * @param node the node to evaluate
+ * @param showIntermediateSteps whether to include intermediate steps in the mesh tree
+ * @returns a mesh tree node containing the mesh and child nodes
+ */
+export function evaluateNodeToMesh(openCascade: OpenCascadeInstance, node: Node, showIntermediateSteps: boolean): MeshTreeNode {
+  Logger.debug('[Worker] Evaluating node to mesh', { nodeId: node.id });
+
+  // First, evaluate the node to get its shape
   const shape = evaluateNode(openCascade, node);
 
-  return triangulate(openCascade, shape);
+  // Triangulate the shape to get the mesh data
+  const triangulation = triangulate(openCascade, shape);
+
+  // Convert triangulation to mesh data
+  const mesh: MeshData = {
+    vertices: Array.from(triangulation.vertices),
+    indices: Array.from(triangulation.indices),
+    normals: Array.from(triangulation.normals),
+  };
+
+  // Only collect child nodes if we're showing intermediate steps
+  const children: MeshTreeNode[] = [];
+
+  if (showIntermediateSteps) {
+    const childNodes: Node[] = collectChildNodes(node);
+
+    // Recursively evaluate child nodes
+    for (const childNode of childNodes) {
+      children.push(evaluateNodeToMesh(openCascade, childNode, showIntermediateSteps));
+    }
+  }
+
+  return {
+    id: node.id,
+    mesh,
+    children,
+  };
 }
 
 /**
@@ -145,4 +191,25 @@ function differenceShapes(openCascade: OpenCascadeInstance, shape1: TopoDS_Shape
   const cut = new openCascade.BRepAlgoAPI_Cut_3(shape1, shape2, messageProgress);
   cut.Build(messageProgress);
   return cut.Shape();
+}
+
+/**
+ * Collects child nodes from a given node based on its operation type.
+ *
+ * @param node the node to extract children from
+ * @returns an array of child nodes
+ */
+function collectChildNodes(node: Node): Node[] {
+  switch (node.operation) {
+    case TreeNodeOperation.Union:
+      return 'left' in node && 'right' in node ? [node.left, node.right] : [];
+    case TreeNodeOperation.Difference:
+      return 'target' in node && 'tool' in node ? [node.target, node.tool] : [];
+    case TreeNodeOperation.Translate:
+    case TreeNodeOperation.Rotate:
+    case TreeNodeOperation.Scale:
+      return 'left' in node ? [node.left] : [];
+    default:
+      return [];
+  }
 }
