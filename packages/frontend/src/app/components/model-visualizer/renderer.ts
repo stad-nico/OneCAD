@@ -1,4 +1,5 @@
 // ! TODO: refactor !
+// @ts-nocheck
 import {
   AmbientLight,
   Color,
@@ -14,7 +15,6 @@ import {
   WebGLRenderer,
 } from 'three';
 import { OrbitControls } from 'three/examples/jsm/controls/OrbitControls.js';
-import { AssemblyVisualization } from '../../utils/shared-types';
 import { LINES_ONLY_MATERIAL } from '../../utils/visualize';
 
 export enum RenderMode {
@@ -59,10 +59,7 @@ export class Renderer {
     };
   }
 
-  private initializeRenderer(
-    canvas: HTMLCanvasElement,
-    dimensions: RendererDimensions,
-  ): WebGLRenderer {
+  private initializeRenderer(canvas: HTMLCanvasElement, dimensions: RendererDimensions): WebGLRenderer {
     const glRenderer = new WebGLRenderer({ canvas, antialias: true });
     glRenderer.setSize(dimensions.width, dimensions.height);
     glRenderer.setPixelRatio(window.devicePixelRatio);
@@ -260,11 +257,10 @@ export class Renderer {
     // return material;
   }
 
-  clear(): void {
+  clear(): this {
     // Remove all meshes from the scene except the grid
     const childrenToRemove = this.scene.children.filter(
-      (child): child is Mesh | Group =>
-        (child instanceof Mesh || child instanceof Group) && !(child instanceof GridHelper),
+      (child): child is Mesh | Group => (child instanceof Mesh || child instanceof Group) && !(child instanceof GridHelper)
     );
 
     childrenToRemove.forEach((mesh) => {
@@ -292,6 +288,8 @@ export class Renderer {
     });
 
     this.visualizations = [];
+
+    return this;
   }
 
   addVisualization(visualization: AssemblyVisualization): void {

@@ -1,30 +1,6 @@
-import {
-  BufferAttribute,
-  BufferGeometry,
-  EdgesGeometry,
-  Group,
-  LineBasicMaterial,
-  LineSegments,
-  Mesh,
-  MeshStandardMaterial,
-} from 'three';
+import { BufferAttribute, BufferGeometry, EdgesGeometry, Group, LineBasicMaterial, LineSegments, Mesh, MeshStandardMaterial } from 'three';
 import { TriangulationResult } from '../../worker/triangulate';
-import { AssemblyVisualization } from './shared-types';
-
-/**
- * Represents the visual components of a triangulated mesh, including the solid mesh and its wireframe edges.
- */
-export interface MeshVisualization {
-  /**
-   * The threejs mesh or group containing meshes
-   */
-  mesh: Group;
-
-  /**
-   * The wireframe edges of the mesh
-   */
-  wireframe: LineSegments | Group;
-}
+import { MeshVisualization } from '../shared/types/mesh-visualization';
 
 /**
  * The material used for the mesh
@@ -63,7 +39,7 @@ export const LINES_ONLY_MATERIAL = new LineBasicMaterial({
  * @param meshNode the mesh node tree from the worker.
  * @returns the visual representation of the mesh(es).
  */
-export function visualize(triangulation: TriangulationResult): AssemblyVisualization {
+export function visualize(triangulation: TriangulationResult): MeshVisualization {
   const { vertices, normals, indices } = triangulation;
 
   if (!vertices) {

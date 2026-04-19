@@ -1,23 +1,14 @@
 import { CommonModule } from '@angular/common';
-import {
-  ChangeDetectionStrategy,
-  Component,
-  computed,
-  effect,
-  ElementRef,
-  input,
-  viewChild,
-} from '@angular/core';
-import { TriangulationResult } from '../../../worker/triangulate';
-import { visualize } from '../../utils/visualize';
-import { ErrorDisplayComponent } from '../common/error-display.component';
+import { ChangeDetectionStrategy, Component, computed, effect, ElementRef, input, viewChild } from '@angular/core';
+import { Maybe } from '@opentscad/types';
+import { MeshVisualization } from '../../shared/types/mesh-visualization';
 import { RenderModeToggleComponent } from './components/render-mode-toggle/render-mode-toggle.component';
 import { Renderer } from './renderer';
 
 @Component({
   selector: 'app-model-visualizer',
   standalone: true,
-  imports: [CommonModule, RenderModeToggleComponent, ErrorDisplayComponent],
+  imports: [CommonModule, RenderModeToggleComponent],
   templateUrl: './model-visualizer.component.html',
   host: {
     class: 'block w-full h-full relative',
@@ -28,7 +19,7 @@ export class ModelVisualizerComponent {
   /**
    * The triangulation result to render.
    */
-  public readonly triangulation = input<TriangulationResult | null>(null);
+  public readonly visualizations = input.required<Maybe<Array<MeshVisualization>>>();
 
   /**
    * The label for the currently displayed mesh.
@@ -51,28 +42,20 @@ export class ModelVisualizerComponent {
    */
   public readonly isLoading = input(false);
 
-  /**
-   * Error message signal.
-   */
-  public readonly error = input<string | null>(null);
-
   constructor() {
     effect(() => {
-      const tri = this.triangulation();
-      if (!tri) {
-        this.renderer().clear();
+      const renderer = this.renderer();
+
+      renderer.clear();
+
+      const visualizations = this.visualizations();
+
+      if (!visualizations) {
         return;
       }
 
-      // Clear previous meshes
-      this.renderer().clear();
-
-      // Convert TriangulationResult to visualization
-      try {
-        const visualization = visualize(tri);
-        this.renderer().addVisualization(visualization);
-      } catch (err) {
-        console.error('Error visualizing triangulation:', err);
+      for (const visualization of visualizations) {
+        renderer.addVisualization(visualization);
       }
     });
   }

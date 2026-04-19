@@ -1,9 +1,11 @@
-<pihub-tree [nodes]="treeNodes()">
+<pihub-tree
+  [nodes]="treeNodes()"
+  (selectedIdChange)="onSelectedIdChange($event)">
   <ng-template
     treeNode
     let-node>
     <section [class.selected]="node.isSelected">
-      <header>
+      <header [class.bg-blue-500]="node.isSelected">
         <p class="text-white">{{ node.name }}</p>
       </header>
       @if (node.children) {

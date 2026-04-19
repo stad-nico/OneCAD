@@ -1,11 +1,9 @@
 import { NgTemplateOutlet } from '@angular/common';
-import { ChangeDetectionStrategy, Component, computed, input } from '@angular/core';
-import { ModelMetadata, Node, TreeNodeOperation } from '@opentscad/types';
-import { TreeNode as BaseTreeNode, TreeComponent, TreeNodeDirective, TreeRoot } from '@pihub/components/tree';
-
-interface TreeNode extends BaseTreeNode {
-  readonly name: string;
-}
+import { ChangeDetectionStrategy, Component, computed, input, output } from '@angular/core';
+import { Node, TreeNodeOperation } from '@opentscad/types';
+import { TreeComponent, TreeNodeDirective, TreeRoot } from '@pihub/components/tree';
+import { Model } from '../../shared/types/model';
+import { TreeNode } from './types/tree-node';
 
 @Component({
   selector: 'app-model-list',
@@ -19,12 +17,36 @@ export class ModelListComponent {
   /**
    * The list of models
    */
-  public readonly models = input.required<Array<{ metadata: ModelMetadata; treeNode: Node }>>();
+  public readonly models = input.required<Array<Model>>();
 
   /**
-   * The tree nodes to display in the tree component, derived from the models input.
+   * The selected node in the tree
+   */
+  public readonly selectedNode = output<TreeNode>();
+
+  /**
+   * The tree nodes to display in the tree component, derived from the models input
    */
   public readonly treeNodes = computed((): Array<TreeNode> => this.models().flatMap((model) => this.buildTreeNodes(model)));
+
+  /**
+   * Handles the change event when a new node is selected in the tree
+   *
+   * @param selectedId the id of the selected node
+   */
+  protected onSelectedIdChange(selectedId: null | string): void {
+    if (!selectedId) {
+      return;
+    }
+
+    const node = this.treeNodes().find((node) => node.id === selectedId);
+
+    if (!node) {
+      return;
+    }
+
+    this.selectedNode.emit(node);
+  }
 
   /**
    * Builds the tree nodes for a given model.
@@ -32,10 +54,10 @@ export class ModelListComponent {
    * @param model the model to build the tree nodes for.
    * @returns an array of tree nodes.
    */
-  private buildTreeNodes(model: { metadata: ModelMetadata; treeNode: Node }): Array<TreeNode> {
+  private buildTreeNodes(model: Model): Array<TreeNode> {
     return [
-      { id: model.metadata.name, name: model.metadata.name, parentId: TreeRoot },
-      ...this.buildTreeNodeRecursively(model.treeNode, model.metadata.name),
+      { id: model.metadata.name, name: model.metadata.name, parentId: TreeRoot, node: model.node },
+      ...this.buildTreeNodeRecursively(model.node, model.metadata.name),
     ];
   }
 
@@ -47,7 +69,7 @@ export class ModelListComponent {
    * @returns an array of tree nodes.
    */
   private buildTreeNodeRecursively(node: Node, parentId: string): Array<TreeNode> {
-    const treeNode = { id: node.id, name: node.operation.toString(), parentId };
+    const treeNode: TreeNode = { id: node.id, name: node.operation.toString(), parentId, node };
 
     let childNodes: Array<Node> = [];
 

@@ -1,5 +1,4 @@
 import { Node } from '@opentscad/types';
-import { MeshTree } from './mesh-tree';
 import { TriangulationResult } from './triangulate';
 
 /**
@@ -27,19 +26,9 @@ export interface EvaluationStep {
   id: string;
 
   /**
-   * Human-readable name/label for this step
-   */
-  label: string;
-
-  /**
    * The triangulated mesh for this step
    */
   triangulation: TriangulationResult;
-
-  /**
-   * The depth/level in the tree hierarchy (0 for root)
-   */
-  depth: number;
 }
 
 /**
@@ -64,11 +53,9 @@ interface WorkerRequestMessageEvaluateModelPayload {
  */
 interface WorkerResponseMessageEvaluateModelPayload {
   /**
-   * The mesh tree containing the complete hierarchy of evaluation results.
-   * Each node in the tree has an id matching the input tree and contains
-   * the mesh for that specific evaluation step.
+   * The list of evaluation steps, including the final triangulation and optionally intermediate steps if requested.
    */
-  meshTree: MeshTree;
+  triangulations: Array<EvaluationStep>;
 }
 
 /**

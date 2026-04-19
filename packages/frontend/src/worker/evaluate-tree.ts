@@ -1,7 +1,7 @@
 import { Logger, Node, TreeNodeOperation } from '@opentscad/types';
 import type { OpenCascadeInstance, TopoDS_Shape } from 'opencascade.js/dist/opencascade.full';
-import { MeshData, MeshTree, MeshTreeNode } from './mesh-tree';
 import { triangulate } from './triangulate';
+import { EvaluationStep } from './types';
 
 /**
  * Evaluates the given node tree and returns a mesh tree with triangulated results for each node.
@@ -11,12 +11,10 @@ import { triangulate } from './triangulate';
  * @param showIntermediateSteps whether to include intermediate steps in the mesh tree
  * @returns a mesh tree containing the complete hierarchy of meshes
  */
-export function evaluateTree(openCascade: OpenCascadeInstance, node: Node, showIntermediateSteps: boolean): MeshTree {
+export function evaluateTree(openCascade: OpenCascadeInstance, node: Node, showIntermediateSteps: boolean): Array<EvaluationStep> {
   Logger.debug('[Worker] Evaluating node tree', { node, showIntermediateSteps });
 
-  const root = evaluateNodeToMesh(openCascade, node, showIntermediateSteps);
-
-  return { root };
+  return evaluateNodeToMesh(openCascade, node, showIntermediateSteps);
 }
 
 /**
@@ -28,39 +26,20 @@ export function evaluateTree(openCascade: OpenCascadeInstance, node: Node, showI
  * @param showIntermediateSteps whether to include intermediate steps in the mesh tree
  * @returns a mesh tree node containing the mesh and child nodes
  */
-export function evaluateNodeToMesh(openCascade: OpenCascadeInstance, node: Node, showIntermediateSteps: boolean): MeshTreeNode {
+export function evaluateNodeToMesh(openCascade: OpenCascadeInstance, node: Node, showIntermediateSteps: boolean): Array<EvaluationStep> {
   Logger.debug('[Worker] Evaluating node to mesh', { nodeId: node.id });
 
-  // First, evaluate the node to get its shape
   const shape = evaluateNode(openCascade, node);
 
-  // Triangulate the shape to get the mesh data
   const triangulation = triangulate(openCascade, shape);
 
-  // Convert triangulation to mesh data
-  const mesh: MeshData = {
-    vertices: Array.from(triangulation.vertices),
-    indices: Array.from(triangulation.indices),
-    normals: Array.from(triangulation.normals),
-  };
-
-  // Only collect child nodes if we're showing intermediate steps
-  const children: MeshTreeNode[] = [];
+  const meshNode: EvaluationStep = { id: node.id, triangulation };
 
   if (showIntermediateSteps) {
-    const childNodes: Node[] = collectChildNodes(node);
-
-    // Recursively evaluate child nodes
-    for (const childNode of childNodes) {
-      children.push(evaluateNodeToMesh(openCascade, childNode, showIntermediateSteps));
-    }
+    return [meshNode, ...collectChildNodes(node).flatMap((node) => evaluateNodeToMesh(openCascade, node, showIntermediateSteps))];
+  } else {
+    return [meshNode];
   }
-
-  return {
-    id: node.id,
-    mesh,
-    children,
-  };
 }
 
 /**

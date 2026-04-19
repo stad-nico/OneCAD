@@ -1,15 +1,15 @@
 import { CommonModule } from '@angular/common';
 import { Component, inject, signal } from '@angular/core';
-import { ModelMetadata, Node } from '@opentscad/types';
+import { Maybe } from '@opentscad/types';
+import { from, map, of } from 'rxjs';
+import { WorkerMessageType } from '../worker/types';
+import { callWorker } from '../worker/worker-caller';
 import { ModelListComponent } from './components/model-list/model-list.component';
+import { TreeNode } from './components/model-list/types/tree-node';
 import { ModelVisualizerComponent } from './components/model-visualizer/model-visualizer.component';
-import { ModelEvaluationService } from './services/model-evaluation.service';
 import { ModelService } from './services/model.service';
-
-interface ModelItem {
-  metadata: ModelMetadata;
-  treeNode: Node;
-}
+import { rxSignal } from './utils/rxSignal';
+import { visualize } from './utils/visualize';
 
 @Component({
   selector: 'app-root',
@@ -27,46 +27,29 @@ export class App {
   private readonly modelService = inject(ModelService);
 
   /**
-   * The model evaluation service for triangulation and display management.
-   */
-  private readonly evaluationService = inject(ModelEvaluationService);
-
-  /**
    * The available models from the backend.
    */
-  public readonly models = this.modelService.models as any;
+  public readonly models = this.modelService.models;
 
   /**
-   * The selected model (tracked internally).
+   * The currently selected node in the model tree, which determines what is visualized in the ModelVisualizerComponent.
    */
-  private readonly selectedModel = signal<ModelItem | null>(null);
+  protected readonly selectedNode = signal<Maybe<TreeNode>>(undefined);
 
   /**
-   * The selected node from evaluation service.
+   * The visualizations derived from the selected node.
    */
-  public readonly selectedNode = this.evaluationService.selectedNode$;
+  protected readonly visualizations = rxSignal(this.selectedNode, (node) => {
+    if (!node) {
+      return of([]);
+    }
 
-  /**
-   * Loading state.
-   */
-  public readonly isLoading = this.evaluationService.isLoading$;
+    if (node?.visualizations) {
+      return of(node.visualizations);
+    }
 
-  /**
-   * Error state.
-   */
-  public readonly error = this.evaluationService.error$;
-
-  /**
-   * Get the selected model for binding.
-   */
-  public getSelectedModel() {
-    return this.selectedModel();
-  }
-
-  /**
-   * Update the selected model.
-   */
-  public setSelectedModel(model: ModelItem): void {
-    this.selectedModel.set(model);
-  }
+    return from(callWorker(WorkerMessageType.EvaluateModel, { node: node.node, showIntermediateSteps: true })).pipe(
+      map(({ triangulations }) => triangulations.map(({ triangulation }) => visualize(triangulation)))
+    );
+  });
 }

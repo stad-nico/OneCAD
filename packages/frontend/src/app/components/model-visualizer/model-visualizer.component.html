@@ -1,59 +1,41 @@
 <div class="relative w-full h-full flex flex-col">
-  <!-- Canvas -->
-  <canvas #canvas class="flex-1"></canvas>
+  <canvas
+    #canvas
+    class="flex-1"></canvas>
 
-  <!-- Render Mode Toggle -->
   <app-render-mode-toggle
     class="absolute bottom-8 left-1/2 -translate-x-1/2"
-    (modeChange)="renderer().setRenderMode($event)"
-  />
+    (modeChange)="renderer().setRenderMode($event)" />
 
-  <!-- Loading State -->
   @if (isLoading()) {
     <div class="absolute inset-0 bg-black/50 flex items-center justify-center rounded-lg">
       <div class="bg-slate-800 rounded-lg p-6 space-y-3 border border-slate-700">
         <div class="flex items-center gap-3">
-          <div
-            class="w-8 h-8 border-4 border-slate-600 border-t-blue-500 rounded-full animate-spin"
-          ></div>
+          <div class="w-8 h-8 border-4 border-slate-600 border-t-blue-500 rounded-full animate-spin"></div>
           <p class="text-slate-200 font-medium">Evaluating model...</p>
         </div>
       </div>
     </div>
   }
 
-  <!-- Error State -->
-  @if (error()) {
-    <div class="absolute inset-0 bg-black/50 flex items-center justify-center rounded-lg">
-      <app-error-display [error]="error()"></app-error-display>
-    </div>
-  }
-
   <!-- Empty State -->
-  @if (!isLoading() && !error() && !triangulation()) {
-    <div
-      class="flex flex-col absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 items-center justify-center"
-    >
-      <div
-        class="flex items-center justify-center size-24 rounded-full bg-blue-500/20 mb-4 animate-pulse"
-      >
+  @if (!isLoading()) {
+    <div class="flex flex-col absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 items-center justify-center">
+      <div class="flex items-center justify-center size-24 rounded-full bg-blue-500/20 mb-4 animate-pulse">
         <svg
           class="w-12 h-12 text-blue-400"
           fill="currentColor"
           xmlns="http://www.w3.org/2000/svg"
-          viewBox="0 -960 960 960"
-        >
+          viewBox="0 -960 960 960">
           <path
-            d="M460-171.46v-297.08L200-619.08v283.23q0 6.16 3.08 11.54 3.07 5.39 9.23 9.23L460-171.46Zm40 0 247.69-143.62q6.16-3.84 9.23-9.23 3.08-5.38 3.08-11.54v-283.23L500-468.54v297.08Zm-20-331.46 257-148.54-244.69-141.62q-6.16-3.84-12.31-3.84t-12.31 3.84L223-651.46l257 148.54ZM192.31-279.69q-15.16-8.69-23.73-23.62-8.58-14.92-8.58-32.31v-288.76q0-17.39 8.58-32.31 8.57-14.93 23.73-23.62l255.38-147.15q15.16-8.69 32.31-8.69 17.15 0 32.31 8.69l255.38 147.15q15.16 8.69 23.73 23.62 8.58 14.92 8.58 32.31v288.76q0 17.39-8.58 32.31-8.57 14.93-23.73 23.62L512.31-132.54q-15.16 8.69-32.31 8.69-17.15 0-32.31-8.69L192.31-279.69ZM480-480Z"
-          />
+            d="M460-171.46v-297.08L200-619.08v283.23q0 6.16 3.08 11.54 3.07 5.39 9.23 9.23L460-171.46Zm40 0 247.69-143.62q6.16-3.84 9.23-9.23 3.08-5.38 3.08-11.54v-283.23L500-468.54v297.08Zm-20-331.46 257-148.54-244.69-141.62q-6.16-3.84-12.31-3.84t-12.31 3.84L223-651.46l257 148.54ZM192.31-279.69q-15.16-8.69-23.73-23.62-8.58-14.92-8.58-32.31v-288.76q0-17.39 8.58-32.31 8.57-14.93 23.73-23.62l255.38-147.15q15.16-8.69 32.31-8.69 17.15 0 32.31 8.69l255.38 147.15q15.16 8.69 23.73 23.62 8.58 14.92 8.58 32.31v288.76q0 17.39-8.58 32.31-8.57 14.93-23.73 23.62L512.31-132.54q-15.16 8.69-32.31 8.69-17.15 0-32.31-8.69L192.31-279.69ZM480-480Z" />
         </svg>
       </div>
       <p class="text-slate-300">Select a model to view</p>
     </div>
   }
 
-  <!-- Label Display -->
-  @if (label() && !isLoading() && !error()) {
+  @if (label()) {
     <div class="absolute top-4 left-4 bg-slate-800/90 rounded-lg px-4 py-2 border border-slate-700">
       <p class="text-sm font-semibold text-slate-200">{{ label() }}</p>
     </div>

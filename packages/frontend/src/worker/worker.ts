@@ -59,13 +59,13 @@ export async function handleRequest(request: WorkerRequestMessage): Promise<void
   if (request.type === WorkerMessageType.EvaluateModel) {
     const { node, showIntermediateSteps } = request.payload;
 
-    const meshTree = await evaluateTree(openCascadeInstance, node, showIntermediateSteps);
+    const triangulations = await evaluateTree(openCascadeInstance, node, showIntermediateSteps);
 
     self.postMessage({
       id: request.id,
       type: WorkerMessageType.EvaluateModel,
       status: 'success',
-      payload: { meshTree },
+      payload: { triangulations },
     } satisfies WorkerResponseMessage);
   }
 }
