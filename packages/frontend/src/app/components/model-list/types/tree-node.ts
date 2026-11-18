@@ -14,8 +14,12 @@ export interface TreeNode extends BaseTreeNode {
   readonly node: Node;
 
   /**
-   * The visualization data for this node. If undefined,
-   * the visualizations have not yet been computed.
+   * The ID of the model this node belongs to.
+   */
+  readonly modelId?: string;
+
+  /**
+   * The precalculated mesh for this node, if computed directly by the backend.
    */
   readonly visualizations?: Maybe<Array<MeshVisualization>>;
 }

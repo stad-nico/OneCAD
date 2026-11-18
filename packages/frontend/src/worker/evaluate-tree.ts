@@ -31,9 +31,13 @@ export function evaluateNodeToMesh(openCascade: OpenCascadeInstance, node: Node,
 
   const shape = evaluateNode(openCascade, node);
 
+  Logger.debug('[Worker] Created shape', { shape });
+
   const triangulation = triangulate(openCascade, shape);
 
   const meshNode: EvaluationStep = { id: node.id, triangulation };
+
+  Logger.debug('[Worker] Evaluated node to mesh', { nodeId: node.id, meshNode });
 
   if (showIntermediateSteps) {
     return [meshNode, ...collectChildNodes(node).flatMap((node) => evaluateNodeToMesh(openCascade, node, showIntermediateSteps))];
@@ -50,6 +54,7 @@ export function evaluateNodeToMesh(openCascade: OpenCascadeInstance, node: Node,
  * @returns the resulting shape from evaluating the node and its children
  */
 export function evaluateNode(openCascade: OpenCascadeInstance, node: Node): TopoDS_Shape {
+  Logger.debug('[Worker] Evaluating node', { nodeId: node.id, operation: node.operation });
   switch (node.operation) {
     case TreeNodeOperation.Box:
       return createBox(openCascade, node.params.width, node.params.height, node.params.depth);
@@ -64,7 +69,7 @@ export function evaluateNode(openCascade: OpenCascadeInstance, node: Node): Topo
     case TreeNodeOperation.Scale:
       return scaleShape(openCascade, evaluateNode(openCascade, node.left), node.params.x, node.params.y, node.params.z);
     case TreeNodeOperation.Union:
-      return unionShapes(openCascade, evaluateNode(openCascade, node.left), evaluateNode(openCascade, node.right));
+      return unionShapes(openCascade, ...node.nodes.map((node) => evaluateNode(openCascade, node)));
     case TreeNodeOperation.Difference:
       return differenceShapes(openCascade, evaluateNode(openCascade, node.target), evaluateNode(openCascade, node.tool));
   }
@@ -150,16 +155,27 @@ function scaleShape(openCascade: OpenCascadeInstance, shape: TopoDS_Shape, x: nu
 }
 
 /**
- * Performs a union of two shapes.
+ * Performs a union of shapes using BRepAlgoAPI_BuilderAlgo.
  */
-function unionShapes(openCascade: OpenCascadeInstance, shapeA: TopoDS_Shape, shapeB: TopoDS_Shape): TopoDS_Shape {
-  const messageProgress = new openCascade.Message_ProgressRange_1();
+function unionShapes(openCascade: OpenCascadeInstance, ...shapes: Array<TopoDS_Shape>): TopoDS_Shape {
+  if (shapes.length === 0) {
+    throw new Error('Union operation requires at least one shape');
+  }
 
-  const fuse = new openCascade.BRepAlgoAPI_Fuse_3(shapeA, shapeB, messageProgress);
+  if (shapes.length === 1) {
+    return shapes[0];
+  }
 
-  fuse.Build(messageProgress);
+  const list = new openCascade.TopTools_ListOfShape_1();
+  for (const shape of shapes) {
+    list.Append_1(shape);
+  }
 
-  return fuse.Shape();
+  const builder = new openCascade.BRepAlgoAPI_BuilderAlgo_1();
+  builder.SetArguments(list);
+  builder.Build(new openCascade.Message_ProgressRange_1());
+
+  return builder.Shape();
 }
 
 /**
@@ -181,7 +197,7 @@ function differenceShapes(openCascade: OpenCascadeInstance, shape1: TopoDS_Shape
 function collectChildNodes(node: Node): Node[] {
   switch (node.operation) {
     case TreeNodeOperation.Union:
-      return 'left' in node && 'right' in node ? [node.left, node.right] : [];
+      return 'nodes' in node ? node.nodes : [];
     case TreeNodeOperation.Difference:
       return 'target' in node && 'tool' in node ? [node.target, node.tool] : [];
     case TreeNodeOperation.Translate:

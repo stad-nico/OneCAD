@@ -1,9 +1,12 @@
 <div class="flex size-full bg-slate-950">
   <app-model-list
     [models]="models()"
-    (selectedNode)="this.selectedNode.set($event)" />
+    (selectedNode)="this.selectedNode.set($event)"
+    (selectedModel)="this.selectedModel.set($event)" />
 
   <app-model-visualizer
     [visualizations]="visualizations()"
+    [selectedId]="this.selectedNode()?.id ?? null"
+    [rootNodeId]="this.selectedModel()?.node?.id ?? null"
     class="flex-1 flex flex-col" />
 </div>

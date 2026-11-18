@@ -39,7 +39,7 @@ export const LINES_ONLY_MATERIAL = new LineBasicMaterial({
  * @param meshNode the mesh node tree from the worker.
  * @returns the visual representation of the mesh(es).
  */
-export function visualize(triangulation: TriangulationResult): MeshVisualization {
+export function visualize(triangulation: TriangulationResult, nodeId: string): MeshVisualization {
   const { vertices, normals, indices } = triangulation;
 
   if (!vertices) {
@@ -66,12 +66,18 @@ export function visualize(triangulation: TriangulationResult): MeshVisualization
   const mesh = new Mesh(geometry, MESH_MATERIAL.clone());
 
   const edgesGeometry = new EdgesGeometry(geometry);
-  const wireframe = new LineSegments(edgesGeometry, LINES_MATERIAL.clone());
+  const wireframes = new LineSegments(edgesGeometry, LINES_MATERIAL.clone());
 
-  // Wrap in a Group for consistency
+  // Combine all geometry into a single mesh group
   const group = new Group();
-  group.add(mesh);
-  group.add(wireframe);
+  const wireframeGroup = new Group();
 
-  return { mesh: group, wireframe };
+  group.add(mesh);
+  wireframeGroup.add(wireframes);
+
+  return {
+    nodeId,
+    mesh: group,
+    wireframe: wireframeGroup,
+  };
 }

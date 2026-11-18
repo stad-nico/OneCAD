@@ -42,20 +42,33 @@ export class ModelVisualizerComponent {
    */
   public readonly isLoading = input(false);
 
+  /**
+   * The selected node id, used for styling highlights on meshes.
+   */
+  public readonly selectedId = input<string | null>(null);
+
+  /**
+   * The root model node ID so we know which one is the completed top-level mesh.
+   */
+  public readonly rootNodeId = input<string | null>(null);
+
   constructor() {
     effect(() => {
       const renderer = this.renderer();
-
       renderer.clear();
 
       const visualizations = this.visualizations();
-
       if (!visualizations) {
         return;
       }
 
+      const selectedId = this.selectedId();
+      const rootId = this.rootNodeId();
+
       for (const visualization of visualizations) {
-        renderer.addVisualization(visualization);
+        if (visualization.nodeId === rootId || visualization.nodeId === selectedId) {
+          renderer.addVisualization(visualization, selectedId, rootId);
+        }
       }
     });
   }

@@ -292,9 +292,71 @@ export class Renderer {
     return this;
   }
 
-  addVisualization(visualization: AssemblyVisualization): void {
-    this.scene.add(visualization.mesh);
+  public addVisualization(visualization: MeshVisualization, selectedId: string | null = null, rootId: string | null = null): void {
+    if (this.visualizations.some((v) => v.mesh.uuid === visualization.mesh.uuid)) {
+      console.warn('Visualization already added to renderer', { visualization });
+      return;
+    }
+
+    visualization.mesh.visible = true;
+    visualization.wireframe.visible = false;
+
+    // Transparency for the root node if it's not selected
+    if (rootId && visualization.nodeId === rootId && selectedId && selectedId !== rootId) {
+      const mesh = visualization.mesh;
+      mesh.children.forEach((child) => {
+        if ((child as any).isMesh) {
+          const m = child as THREE.Mesh;
+          if (!(m.material as any).__originalOpacity) {
+            (m.material as any).__originalOpacity = (m.material as THREE.MeshStandardMaterial).opacity;
+            (m.material as any).__originalTransparent = (m.material as THREE.MeshStandardMaterial).transparent;
+          }
+          (m.material as THREE.MeshStandardMaterial).transparent = true;
+          (m.material as THREE.MeshStandardMaterial).opacity = 0.3;
+        }
+      });
+    } else {
+      const mesh = visualization.mesh;
+      mesh.children.forEach((child) => {
+        if ((child as any).isMesh) {
+          const m = child as THREE.Mesh;
+          if ((m.material as any).__originalOpacity !== undefined) {
+            (m.material as THREE.MeshStandardMaterial).opacity = (m.material as any).__originalOpacity;
+            (m.material as THREE.MeshStandardMaterial).transparent = (m.material as any).__originalTransparent;
+          }
+        }
+      });
+    }
+
+    // Check if we should highlight this visualization
+    if (selectedId && visualization.nodeId === selectedId && selectedId !== rootId) {
+      // Highlight for the selected mesh
+      const mesh = visualization.mesh;
+      mesh.children.forEach((child) => {
+        if ((child as any).isMesh) {
+          const m = child as THREE.Mesh;
+          // Temporarily change material color or emit an outline, simplest is coloring for this case
+          if (!(m.material as any).__originalColor) {
+            (m.material as any).__originalColor = ((m.material as THREE.MeshStandardMaterial).color as THREE.Color).clone();
+          }
+          (m.material as THREE.MeshStandardMaterial).color.set(0xff0000);
+        }
+      });
+    } else {
+      // Revert highlight if necessary
+      const mesh = visualization.mesh;
+      mesh.children.forEach((child) => {
+        if ((child as any).isMesh) {
+          const m = child as THREE.Mesh;
+          if ((m.material as any).__originalColor) {
+            (m.material as THREE.MeshStandardMaterial).color.copy((m.material as any).__originalColor);
+          }
+        }
+      });
+    }
+
     this.visualizations.push(visualization);
+    this.scene.add(visualization.mesh);
     this.updateMeshesForMode();
   }
 }

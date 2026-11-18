@@ -5,6 +5,11 @@ import { Group, LineSegments } from 'three';
  */
 export interface MeshVisualization {
   /**
+   * The ID of the node this visualization belongs to
+   */
+  nodeId: string;
+
+  /**
    * The threejs mesh or group containing meshes
    */
   mesh: Group;

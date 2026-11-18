@@ -53,17 +53,10 @@ export function cylinder(radius: number, height: number): Shape {
  * @returns the combined shape
  */
 export function union(...shapes: Array<Shape>): Shape {
-  return shapes.reduce((acc, shape) => {
-    if (!acc) {
-      return shape;
-    }
-
-    return new Shape({
-      id: uuidv4(),
-      operation: TreeNodeOperation.Union,
-      left: acc.node,
-      right: shape.node,
-    });
+  return new Shape({
+    id: uuidv4(),
+    operation: TreeNodeOperation.Union,
+    nodes: shapes.map((shape) => shape.node),
   });
 }
 

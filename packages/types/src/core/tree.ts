@@ -235,14 +235,9 @@ export interface ScaleNode extends TreeNode<TreeNodeOperation.Scale> {
  */
 export interface UnionNode extends TreeNode<TreeNodeOperation.Union> {
   /**
-   * The left shape to union.
+   * The shapes to union together.
    */
-  left: Node;
-
-  /**
-   * The right shape to union.
-   */
-  right: Node;
+  nodes: Array<Node>;
 }
 
 /**

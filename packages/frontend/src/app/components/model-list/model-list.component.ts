@@ -25,6 +25,11 @@ export class ModelListComponent {
   public readonly selectedNode = output<TreeNode>();
 
   /**
+   * The selected model containing the node
+   */
+  public readonly selectedModel = output<Model>();
+
+  /**
    * The tree nodes to display in the tree component, derived from the models input
    */
   public readonly treeNodes = computed((): Array<TreeNode> => this.models().flatMap((model) => this.buildTreeNodes(model)));
@@ -45,6 +50,11 @@ export class ModelListComponent {
       return;
     }
 
+    const model = this.models().find((model) => model.node.id === node.modelId || model.metadata.name === node.id);
+
+    if (model) {
+      this.selectedModel.emit(model);
+    }
     this.selectedNode.emit(node);
   }
 
@@ -56,8 +66,8 @@ export class ModelListComponent {
    */
   private buildTreeNodes(model: Model): Array<TreeNode> {
     return [
-      { id: model.metadata.name, name: model.metadata.name, parentId: TreeRoot, node: model.node },
-      ...this.buildTreeNodeRecursively(model.node, model.metadata.name),
+      { id: model.metadata.name, name: model.metadata.name, parentId: TreeRoot, node: model.node, modelId: model.node.id },
+      ...this.buildTreeNodeRecursively(model.node, model.metadata.name, model.node.id),
     ];
   }
 
@@ -66,10 +76,11 @@ export class ModelListComponent {
    *
    * @param node the current node to process.
    * @param parentId the id of the parent node.
+   * @param modelId the id of the model.
    * @returns an array of tree nodes.
    */
-  private buildTreeNodeRecursively(node: Node, parentId: string): Array<TreeNode> {
-    const treeNode: TreeNode = { id: node.id, name: node.operation.toString(), parentId, node };
+  private buildTreeNodeRecursively(node: Node, parentId: string, modelId: string): Array<TreeNode> {
+    const treeNode: TreeNode = { id: node.id, name: node.operation.toString(), parentId, node, modelId };
 
     let childNodes: Array<Node> = [];
 
@@ -85,7 +96,7 @@ export class ModelListComponent {
         childNodes = [node.left];
         break;
       case TreeNodeOperation.Union:
-        childNodes = [node.left, node.right];
+        childNodes = node.nodes;
         break;
 
       case TreeNodeOperation.Difference:
@@ -93,6 +104,6 @@ export class ModelListComponent {
         break;
     }
 
-    return [treeNode, ...childNodes.flatMap((child) => this.buildTreeNodeRecursively(child, node.id))];
+    return [treeNode, ...childNodes.flatMap((child) => this.buildTreeNodeRecursively(child, node.id, modelId))];
   }
 }

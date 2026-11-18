@@ -8,6 +8,7 @@ import { ModelListComponent } from './components/model-list/model-list.component
 import { TreeNode } from './components/model-list/types/tree-node';
 import { ModelVisualizerComponent } from './components/model-visualizer/model-visualizer.component';
 import { ModelService } from './services/model.service';
+import { Model } from './shared/types/model';
 import { rxSignal } from './utils/rxSignal';
 import { visualize } from './utils/visualize';
 
@@ -37,19 +38,23 @@ export class App {
   protected readonly selectedNode = signal<Maybe<TreeNode>>(undefined);
 
   /**
-   * The visualizations derived from the selected node.
+   * The selected model
    */
-  protected readonly visualizations = rxSignal(this.selectedNode, (node) => {
-    if (!node) {
+  protected readonly selectedModel = signal<Maybe<Model>>(undefined);
+
+  /**
+   * The visualizations derived from the selected model.
+   */
+  protected readonly visualizations = rxSignal(this.selectedModel, (model) => {
+    if (!model) {
       return of([]);
     }
 
-    if (node?.visualizations) {
-      return of(node.visualizations);
-    }
-
-    return from(callWorker(WorkerMessageType.EvaluateModel, { node: node.node, showIntermediateSteps: true })).pipe(
-      map(({ triangulations }) => triangulations.map(({ triangulation }) => visualize(triangulation)))
-    );
+    return from(
+      callWorker(WorkerMessageType.EvaluateModel, {
+        node: model.node,
+        showIntermediateSteps: model.metadata.showIntermediateSteps ?? false,
+      })
+    ).pipe(map(({ triangulations }) => triangulations.map(({ id, triangulation }) => visualize(triangulation, id))));
   });
 }
